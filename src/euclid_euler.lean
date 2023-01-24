@@ -12,25 +12,37 @@ import number_theory.divisors
 import number_theory.lucas_lehmer
 import tactic
 
-namespace nat
+/-
+Below are results leading up to Euclid-Euler Theorem
+-/
 
 open finset
 open nat.arithmetic_function
 open_locale arithmetic_function
 open_locale big_operators
 
-variable X : ℤ
+-- Lemma that allows us to cast mersenne numbers to integers
+lemma coe_mersenne {n : ℕ} : (mersenne n : ℤ) = (2 : ℤ) ^ n - 1 :=
+begin
+  simp [mersenne],
+end
 
-/-
-Below are results leading up to Euclid-Euler Theorem
--/
+lemma mersenne_inc {m n : ℕ} (h : m < n) : mersenne m < mersenne n :=
+begin
+  suffices : (mersenne m : ℤ) < mersenne n,
+  { exact_mod_cast this, },
+  simp [coe_mersenne],
+  exact pow_lt_pow one_lt_two h,
+end
 
 -- Thank you to Kevin Buzzard, Niels Voss and Yaël Dillies for helping with this!
-theorem mersenne_div {m n : ℕ} (h : m ∣ n) : mersenne m ∣ mersenne n :=
+lemma mersenne_div {m n : ℕ} (h : m ∣ n) : mersenne m ∣ mersenne n :=
 begin
   rcases h with ⟨k, rfl⟩,
   simpa only [mersenne, pow_mul, one_pow] using nat_sub_dvd_pow_sub_pow _ 1 _,
 end
+
+-- set_option pp.all true
 
 -- 2^n - 1 is Mersenne prime implies n is prime
 theorem mersenne_theorem {n : ℕ} (h : nat.prime (mersenne n)) : nat.prime n :=
@@ -41,7 +53,6 @@ begin
     by_contradiction h',
     push_neg at h',
 
-    -- TODO: Simplify this, seems repetitive
     cases nat.lt_succ_iff.1 h' with _ h',
     { simp [mersenne, nat.not_prime_one] at h, exact h, },
     { simp [mersenne, nat.eq_zero_of_le_zero h', nat.not_prime_zero] at h, exact h, }
@@ -49,55 +60,34 @@ begin
 
   -- Assume n is composite
   by_contradiction n_comp,
-  rcases nat.exists_dvd_of_not_prime _ n_comp with ⟨d, d_div, d_ne_one, d_ne_n⟩,
+  rcases nat.exists_dvd_of_not_prime two_le_n n_comp with ⟨d, d_dvd, d_ne_one, d_ne_n⟩,
 
-  -- TODO: Remove these...
-  have d_ne_zero : d ≠ 0,
-  { by_contradiction, rw h at d_div, rw zero_dvd_iff at d_div, linarith, },
-  have one_le_pow_two_d : 1 ≤ 2 ^ d,
-  { apply nat.one_le_pow, omega, },
+  have d_pos : 0 < d,
+  { by_contradiction, simp at h, rw h at d_dvd, rw zero_dvd_iff at d_dvd, linarith, },
   have two_le_d : 2 ≤ d,
   { cases d, omega, cases d; omega,},
-  have four_sub_one_le_pow_two_sub_one: 4 - 1 ≤ 2 ^ d - 1,
-  {
-    change 2 ^ 2 - 1 ≤ 2 ^ d - 1,
-    rw nat.sub_le_sub_iff_right,
-    exact pow_le_pow (by linarith) two_le_d,
-    exact nat.one_le_pow d 2 zero_lt_two,
-  },
 
   -- Then mersenne n is not prime
-  rcases mersenne_div d_div with ⟨md, hmd⟩,
-  have : ¬nat.prime (mersenne n),
+  rcases mersenne_div d_dvd with ⟨md, hmd⟩,
+  suffices : ¬nat.prime (mersenne n),
+  { exact this h, },
   {
+    -- We cast to int for easier life
     apply nat.not_prime_mul' hmd.symm,
     {
-      unfold mersenne,
-
-      -- TODO: Remove this...
-      calc
-      1 < 4 - 1 : by simp
-      ... ≤ 2 ^ d - 1 : by { simp [four_sub_one_le_pow_two_sub_one] },
+      have : (2 : ℤ) ^ 1 < 2 ^ d,
+      { exact pow_lt_pow one_lt_two two_le_d, },
+      have : (1 : ℤ) < (mersenne d : ℤ),
+      { simp [coe_mersenne], linarith, },
+      exact_mod_cast this,
     },
     {
-      -- Ruling out cases where (mersenne n / mersenne d) <= 2
-      by_contradiction H,
-      push_neg at H,
-      cases md,
-      { simp [hmd] at h, exact nat.not_prime_zero h, },
-      {
-        unfold mersenne at hmd,
-        rw [nat.succ_le_iff, nat.lt_one_iff] at H,
-        simp [H] at hmd,
-        -- TODO: Here I am proving 2 ^ n - 1 = 2 ^ d - 1 => n = d ... Is there better way?
-        rw [tsub_left_inj (nat.one_le_pow n 2 zero_lt_two) one_le_pow_two_d, eq_comm] at hmd,
-        exact d_ne_n (nat.pow_right_injective rfl.ge hmd),
-      }
+      have : mersenne d < mersenne n,
+      { apply mersenne_inc, exact lt_iff_le_and_ne.2 ⟨nat.le_of_dvd (by linarith) d_dvd, d_ne_n⟩, },
+      simp [hmd] at this,
+      exact (lt_mul_iff_one_lt_right (mersenne_pos d_pos)).1 this,
     }
   },
-
-  exact this h,
-  exact two_le_n,
 end
 
 lemma sigma_two_pow_eq_mersenne_succ (k : ℕ) : σ 1 (2 ^ k) = 2 ^ (k + 1) - 1 :=
@@ -164,5 +154,3 @@ begin
     },
   },
 end
-
-end nat
