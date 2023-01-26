@@ -71,23 +71,22 @@ begin
   rcases mersenne_div d_dvd with ⟨md, hmd⟩,
   suffices : ¬nat.prime (mersenne n),
   { exact this h, },
+
+  -- We cast to int for easier life
+  apply nat.not_prime_mul' hmd.symm,
   {
-    -- We cast to int for easier life
-    apply nat.not_prime_mul' hmd.symm,
-    {
-      have : (2 : ℤ) ^ 1 < 2 ^ d,
-      { exact pow_lt_pow one_lt_two two_le_d, },
-      have : (1 : ℤ) < (mersenne d : ℤ),
-      { simp [coe_mersenne], linarith, },
-      exact_mod_cast this,
-    },
-    {
-      have : mersenne d < mersenne n,
-      { apply mersenne_inc, exact lt_iff_le_and_ne.2 ⟨nat.le_of_dvd (by linarith) d_dvd, d_ne_n⟩, },
-      simp [hmd] at this,
-      exact (lt_mul_iff_one_lt_right (mersenne_pos d_pos)).1 this,
-    }
+    have : (2 : ℤ) ^ 1 < 2 ^ d,
+    { exact pow_lt_pow one_lt_two two_le_d, },
+    have : (1 : ℤ) < (mersenne d : ℤ),
+    { simp [coe_mersenne], linarith, },
+    exact_mod_cast this,
   },
+  {
+    have : mersenne d < mersenne n,
+    { apply mersenne_inc, exact lt_iff_le_and_ne.2 ⟨nat.le_of_dvd (by linarith) d_dvd, d_ne_n⟩, },
+    simp [hmd] at this,
+    exact (lt_mul_iff_one_lt_right (mersenne_pos d_pos)).1 this,
+  }
 end
 
 lemma sigma_two_pow_eq_mersenne_succ (k : ℕ) : σ 1 (2 ^ k) = 2 ^ (k + 1) - 1 :=
