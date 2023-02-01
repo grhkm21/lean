@@ -1,10 +1,12 @@
 import data.nat.basic
 import data.nat.prime
 import data.nat.prime_norm_num
+import data.real.basic
 import tactic
 import data.matrix.basic
 import number_theory.bernoulli
 import number_theory.bernoulli_polynomials
+import number_theory.liouville.liouville_constant
 
 open_locale big_operators
 open_locale nat polynomial
@@ -100,7 +102,107 @@ end
 
 example {q : ℚ} : q = q.num * (1 / q.denom) :=
 begin
-  library_search,
+  rcases q with ⟨m, n, n_pos, mn_coprime⟩,
+  simp,
+  rw [eq_comm, mul_inv_eq_iff_eq_mul₀, rat.mul_denom_eq_num],
+  -- hint,
+end
+
+example {α : Type*} {x y : α} : x = y ↔ y = x :=
+begin
+  library_search!,
+end
+
+example {x y : ℚ} (h : -x = -y) : x = y :=
+begin
+  library_search!,
+end
+
+example : true :=
+begin
+  -- We construct a transcendental number x
+  let x := liouville.liouville_number 1,
+
+  -- Then construct the set {1, x, x^2, ...}
+  
+  -- Then prove it is linearly independent
+end
+
+example : true :=
+begin
+  let real_basis := basis.of_vector_space ℚ ℝ,
+  let real_index_set : set ℝ := basis.of_vector_space_index ℚ ℝ,
+
+  -- we prove that the set is nonempty
+  have real_index_set_nonempty : real_index_set.nonempty,
+  { rw ← set.nonempty_coe_sort, exact real_basis.index_nonempty, },
+  let real_basis_vec₁ := set.nonempty.some real_index_set_nonempty,
+
+  -- we prove that the set is infinite
+  have real_index_set_infinite : real_index_set.infinite,
+  {
+    -- TODO: Add proof by showing that for a transcendental x,
+    -- 1, x, x^2, ... are linearly independent, so any basis is infinite
+    sorry,
+  },
+  
+  -- then we can choose some basis vectors
+  let real_index_nat_embedding := set.infinite.nat_embedding real_index_set real_index_set_infinite,
+  let real_basis_vec₀ := real_index_nat_embedding 0,
+  let real_basis_vec₁ := real_index_nat_embedding 1,
+
+  -- they are not equal
+  have real_basis_vec₀_ne_real_basis_vec₁: real_basis_vec₀ ≠ real_basis_vec₁,
+  {
+    by_contradiction,
+    linarith [real_index_nat_embedding.injective h],
+  },
+
+  let f_map : real_index_set → ℝ := λ index, real_basis_vec₁,
+  let f := real_basis.constr ℝ f_map,
+
+  -- verifies cauchy's
+  have : ∀ x y, f (x + y) = f x + f y,
+  { intros x y, apply f.map_add', },
+  
+  -- verifies non-linear
+  let x₀ : ℝ := real_basis real_basis_vec₀,
+  let x₁ : ℝ := real_basis real_basis_vec₁,
+  have : ∃ x, f x ≠ x * f 1,
+  {
+    by_contradiction,
+    push_neg at h,
+    have h₀ := h x₀,
+    have h₁ := h x₁,
+    conv_lhs at h₀ { simp only [f, x₀, basis.constr_basis, f_map] },
+    conv_lhs at h₁ { simp only [f, x₀, basis.constr_basis, f_map] },
+    rw [h₁, mul_eq_mul_right_iff] at h₀,
+    cases h₀,
+    {
+      simp only [x₀, x₁] at h₀,
+      exact real_basis_vec₀_ne_real_basis_vec₁.symm (real_basis.injective h₀),
+    },
+    {
+      rw linear_map.map_eq_zero_iff at h₀,
+      linarith,
+    }
+  }
+end
+
+example {a b b' c : ℝ} (hc : c ≠ 0) (h : a = b * c) (h' : a = b' * c) : b = b' :=
+begin
+  rw [h, mul_eq_mul_right_iff] at h',
+  exact (or_iff_left hc).1 h',
+end
+
+example {P Q : Prop} (h : P ∨ Q) (h' : ¬Q) : P :=
+begin
+  library_search!,
+end
+
+example : ite (1 = 1) 2 3 = 2 :=
+begin
+  dec_trivial,
 end
 
 end polynomial

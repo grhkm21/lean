@@ -1,8 +1,3 @@
-/-
-Copyright (c) 2020 Bhavik Mehta, Aaron Anderson. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Bhavik Mehta, Aaron Anderson
--/
 import ring_theory.power_series.basic
 import combinatorics.partition
 import data.nat.parity
@@ -11,46 +6,6 @@ import data.fin.tuple.nat_antidiagonal
 import tactic.interval_cases
 import tactic.apply_fun
 import tactic.congrm
-
-/-!
-# Euler's Partition Theorem
-
-This file proves Theorem 45 from the [100 Theorems List](https://www.cs.ru.nl/~freek/100/).
-
-The theorem concerns the counting of integer partitions -- ways of
-writing a positive integer `n` as a sum of positive integer parts.
-
-Specifically, Euler proved that the number of integer partitions of `n`
-into *distinct* parts equals the number of partitions of `n` into *odd*
-parts.
-
-## Proof outline
-
-The proof is based on the generating functions for odd and distinct partitions, which turn out to be
-equal:
-
-$$\prod_{i=0}^\infty \frac {1}{1-X^{2i+1}} = \prod_{i=0}^\infty (1+X^{i+1})$$
-
-In fact, we do not take a limit: it turns out that comparing the `n`'th coefficients of the partial
-products up to `m := n + 1` is sufficient.
-
-In particular, we
-
-1. define the partial product for the generating function for odd partitions `partial_odd_gf m` :=
-  $$\prod_{i=0}^m \frac {1}{1-X^{2i+1}}$$;
-2. prove `odd_gf_prop`: if `m` is big enough (`m * 2 > n`), the partial product's coefficient counts
-  the number of odd partitions;
-3. define the partial product for the generating function for distinct partitions
-  `partial_distinct_gf m` := $$\prod_{i=0}^m (1+X^{i+1})$$;
-4. prove `distinct_gf_prop`: if `m` is big enough (`m + 1 > n`), the `n`th coefficient of the
-  partial product counts the number of distinct partitions of `n`;
-5. prove `same_coeffs`: if m is big enough (`m ≥ n`), the `n`th coefficient of the partial products
-  are equal;
-6. combine the above in `partition_theorem`.
-
-## References
-https://en.wikipedia.org/wiki/Partition_(number_theory)#Odd_parts_and_distinct_parts
--/
 
 open power_series
 noncomputable theory
@@ -61,25 +16,8 @@ open finset
 open_locale big_operators
 open_locale classical
 
-/--
-The partial product for the generating function for odd partitions.
-TODO: As `m` tends to infinity, this converges (in the `X`-adic topology).
-
-If `m` is sufficiently large, the `i`th coefficient gives the number of odd partitions of the
-natural number `i`: proved in `odd_gf_prop`.
-It is stated for an arbitrary field `α`, though it usually suffices to use `ℚ` or `ℝ`.
--/
 def partial_odd_gf (m : ℕ) [field α] := ∏ i in range m, (1 - (X : power_series α)^(2*i+1))⁻¹
 
-/--
-The partial product for the generating function for distinct partitions.
-TODO: As `m` tends to infinity, this converges (in the `X`-adic topology).
-
-If `m` is sufficiently large, the `i`th coefficient gives the number of distinct partitions of the
-natural number `i`: proved in `distinct_gf_prop`.
-It is stated for an arbitrary commutative semiring `α`, though it usually suffices to use `ℕ`, `ℚ`
-or `ℝ`.
--/
 def partial_distinct_gf (m : ℕ) [comm_semiring α] :=
 ∏ i in range m, (1 + (X : power_series α)^(i+1))
 
