@@ -88,10 +88,19 @@ begin
   rw [_root_.bernoulli, ← mul_assoc, ← mul_pow, mul_neg_one, neg_neg, one_pow, one_mul],
 end
 
-
 example {a b c : ℚ[X]} : a * b * c = b * a * c :=
 begin
   show_term {simp},
+end
+
+example {n : ℕ} : n = (2 ^ 2000) + 1 :=
+begin
+  norm_num,
+end
+
+example {q : ℚ} : q = q.num * (1 / q.denom) :=
+begin
+  library_search,
 end
 
 end polynomial
