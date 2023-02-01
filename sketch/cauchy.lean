@@ -10,6 +10,7 @@ open_locale nat polynomial
 
 open nat finset
 
+-- Slow proof
 example {f : ℚ → ℚ} (h : ∀ x, ∀ y, f (x + y) = f x + f y) : ∀ x, f x = x * f 1 :=
 begin
   have f_zero : f 0 = 0,
@@ -43,6 +44,22 @@ begin
   rw [div_eq_mul_inv, f_int_mul, inv_eq_one_div, f_one_div, div_eq_mul_one_div],
   ring,
   linarith,
+end
+
+-- Quicker proof
+example {f : ℚ → ℚ} (h : ∀ x, ∀ y, f (x + y) = f x + f y) : ∀ x, f x = x * f 1 :=
+begin
+  -- Setup f as linear_map from ℚ to ℚ
+  have map_zero : f 0 = 0,
+  { specialize h 0 0, simp at h, exact h, },
+  let f_lin : ℚ →+ ℚ := { to_fun := f, map_zero' := map_zero, map_add' := h },
+  let f_hom : ℚ →ₗ[ℚ] ℚ := add_monoid_hom.to_rat_linear_map f_lin,
+
+  -- The rest is straightforward
+  intro x,
+  let := f_hom.map_smul' x 1,
+  simp at this,
+  exact this,
 end
 
 example : ∃ f : ℝ → ℝ, (∀ x y, f (x + y) = f x + f y) ∧ (∃ x : ℝ, f x ≠ x * f 1) :=
@@ -117,6 +134,7 @@ begin
     have h' : ∀ (p : ℚ[X]), p ≠ 0 → (polynomial.aeval (liouville.liouville_number ↑3)) p ≠ 0,
     {
       intros p hp,
+      simp [polynomial.aeval, polynomial.eval₂_ring_hom', polynomial.eval₂, polynomial.sum],
       -- Somehow "clear the denominators"
       -- Look at `data.polynomial.denoms_clearable`
     }

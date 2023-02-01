@@ -6,7 +6,6 @@ import tactic
 import data.matrix.basic
 import number_theory.bernoulli
 import number_theory.bernoulli_polynomials
-import number_theory.liouville.liouville_constant
 
 open_locale big_operators
 open_locale nat polynomial
@@ -116,16 +115,6 @@ end
 example {x y : ℚ} (h : -x = -y) : x = y :=
 begin
   library_search!,
-end
-
-example : true :=
-begin
-  -- We construct a transcendental number x
-  let x := liouville.liouville_number 1,
-
-  -- Then construct the set {1, x, x^2, ...}
-  
-  -- Then prove it is linearly independent
 end
 
 example : true :=
