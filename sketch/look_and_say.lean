@@ -23,16 +23,28 @@ def look_and_say : ℕ → list ℕ → list ℕ
 
 set_option profiler true
 
--- Test case: Applying the operation 1 time (357ms)
-example {l : list ℕ} (h : l = look_and_say 1 [1, 1, 2, 3, 3, 1]) : l = [2, 1, 1, 2, 2, 3, 1, 1] :=
+-- Test case: Applying the operation 5 time (361ms)
+example {l : list ℕ} (h : l = look_and_say 5 [1]) : l = [3, 1, 2, 2, 1, 1] :=
 begin
   norm_num [look_and_say, look_and_say_aux, flatten_pairs] at h,
   exact h,
 end
 
--- Test case: Applying the operation 10 times (6.327s)
-example {l : list ℕ} (h : l = look_and_say 10 [1, 1, 2, 3, 3, 1]) : l = [3, 1, 1, 3, 1, 2, 2, 1, 1, 3, 3, 2, 2, 1, 1, 3, 1, 1, 1, 2, 2, 1, 1, 3, 1, 2, 2, 1, 2, 2, 3, 1, 1, 3, 1, 1, 2, 2, 2, 1, 1, 3, 1, 1, 1, 2, 2, 1, 2, 2, 1, 1, 1, 3, 1, 2, 2, 1, 1, 2, 1, 3, 2, 1, 1, 3, 3, 1, 1, 2, 1, 3, 2, 1, 1, 3, 2, 1, 2, 2, 2, 1] :=
+-- Test case: Applying the operation 15 times (39.9s)
+example {l : list ℕ} (h : l = look_and_say 15 [1]) : l = [1, 3, 2, 1, 1, 3, 2, 1, 3, 2, 2, 1, 1, 3, 3, 1, 1, 2, 1, 3, 2, 1, 1, 3, 3, 1, 1, 2, 1, 1, 1, 3, 1, 2, 2, 1, 1, 2, 1, 3, 2, 1, 1, 3, 1, 2, 1, 1, 1, 3, 2, 2, 2, 1, 1, 2, 3, 1, 1, 3, 1, 1, 2, 2, 2, 1, 1, 3, 1, 1, 1, 2, 3, 1, 1, 3, 3, 2, 1, 1, 1, 2, 1, 3, 2, 1, 1, 3, 2, 2, 2, 1, 1, 3, 1, 2, 1, 1, 3, 2, 1, 1] :=
 begin
   norm_num [look_and_say, look_and_say_aux, flatten_pairs] at h,
   exact h,
 end
+
+-- TODO (Idea): Prove correspondence between atoms and sequence is actually valid i.e.
+--
+--          Decompose
+-- Sequence --------> Atom
+--    |                 |
+--    |                 |   look_and_say
+--    v                 v
+-- Sequence <-------- Atom
+--          Map atoms
+-- 
+-- Commutes
