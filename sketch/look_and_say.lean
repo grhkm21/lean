@@ -1,33 +1,38 @@
 import tactic
 
--- Idea: First construct a function that takes an array of digits and applies "look and say" to it
+-- Flatten list of pairs
+def flatten_pairs : list (ℕ × ℕ) → list ℕ
+  | []             := []
+  | ((x, y) :: xs) := [x, y] ++ flatten_pairs xs
 
--- l is stored in reverse order i.e. most recent one is at the front, in the format [(num, freq)]
+-- Idea: First construct a function that takes an array of digits and applies "look and say" to it
+-- l is stored in reverse order i.e. most recent one is at the front, in the format [(freq, num)]
 -- f_aux [] l = l
 -- f_aux [1, 1] [(1, 1)] = [(1, 3)]
 -- f_aux [1, 1] [(2, 1)] = [(1, 2), (2, 1)]
-def f_aux : list ℕ → list (ℕ × ℕ) → list (ℕ × ℕ)
-  | [] l := l
-  | (x :: xs) [] := f_aux xs [(x, 1)]
-  | (x :: xs) ((l, c) :: ls) := f_aux xs ((ite (x = l) [(l, c + 1)] [(x, 1), (l, c)]) ++ ls)
+def look_and_say_aux : list ℕ → list (ℕ × ℕ) → list (ℕ × ℕ)
+  | [] l                 := l
+  | (x::xs) []           := look_and_say_aux xs [(1, x)]
+  | (x::xs) ((f, n)::ls) := look_and_say_aux xs ((ite (x = n) [(f + 1, n)] [(1, x), (f, n)]) ++ ls)
 
--- Swap pairs in list of pairs
-def swap_pairs : list (ℕ × ℕ) → list (ℕ × ℕ)
-  | [] := []
-  | ((x, y) :: xs) := (y, x) :: swap_pairs xs
-
--- Flatten list of pairs
-def flatten_pairs : list (ℕ × ℕ) → list ℕ
-  | [] := []
-  | ((x, y) :: xs) := [x, y] ++ flatten_pairs xs
-
--- Calls f_aux
+-- Calls look_and_say_aux
 -- [1, 1, 2, 3, 3, 1] -> [(1, 1), (3, 2), (2, 1), (1, 2)] -> 
-def f (l : list ℕ) : list ℕ := flatten_pairs (list.reverse (swap_pairs (f_aux l list.nil)))
+def look_and_say : ℕ → list ℕ → list ℕ
+  | 0 l       := l
+  | (n + 1) l := look_and_say n (flatten_pairs $ list.reverse $ look_and_say_aux l list.nil)
 
-example {l : list ℕ} (h : l = f [1, 1, 2, 3, 3, 1]) : l = [2, 1, 1, 2, 2, 3, 1, 1] :=
+set_option profiler true
+
+-- Test case: Applying the operation 1 time (357ms)
+example {l : list ℕ} (h : l = look_and_say 1 [1, 1, 2, 3, 3, 1]) : l = [2, 1, 1, 2, 2, 3, 1, 1] :=
 begin
-  simp [f, flatten_pairs, swap_pairs, f_aux] at h,
-  norm_num at h,
+  norm_num [look_and_say, look_and_say_aux, flatten_pairs] at h,
+  exact h,
+end
+
+-- Test case: Applying the operation 10 times (6.327s)
+example {l : list ℕ} (h : l = look_and_say 10 [1, 1, 2, 3, 3, 1]) : l = [3, 1, 1, 3, 1, 2, 2, 1, 1, 3, 3, 2, 2, 1, 1, 3, 1, 1, 1, 2, 2, 1, 1, 3, 1, 2, 2, 1, 2, 2, 3, 1, 1, 3, 1, 1, 2, 2, 2, 1, 1, 3, 1, 1, 1, 2, 2, 1, 2, 2, 1, 1, 1, 3, 1, 2, 2, 1, 1, 2, 1, 3, 2, 1, 1, 3, 3, 1, 1, 2, 1, 3, 2, 1, 1, 3, 2, 1, 2, 2, 2, 1] :=
+begin
+  norm_num [look_and_say, look_and_say_aux, flatten_pairs] at h,
   exact h,
 end
