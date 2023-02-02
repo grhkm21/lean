@@ -104,7 +104,7 @@ begin
     simp only [basis.repr_self, finsupp.map_domain_single, finsupp.total_single, one_smul, id,
                f_map],
     simp [set_coe.ext_iff],
-  }
+  },
 end
 
 ---------------------------------

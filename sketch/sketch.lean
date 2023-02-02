@@ -194,4 +194,13 @@ begin
   dec_trivial,
 end
 
+example : true :=
+begin
+  let real_basis := basis.of_vector_space ℚ ℝ,
+  let real_index_set := basis.of_vector_space_index ℚ ℝ,
+  let f_map := λ index, (0 : ℝ),
+  let f : ℝ → ℝ := real_basis.constr ℝ f_map,
+  dsimp [basis.constr] at f,
+end
+
 end polynomial

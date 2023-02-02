@@ -63,4 +63,12 @@ begin
   norm_num,
 end
 
+-- Benchmark: 949ms, quite fast
+example {n : ℕ} : π 1000 = 168 :=
+begin
+  rw [prime_counting, prime_counting', count],
+  dsimp [list.range, list.range_core, list.countp],
+  norm_num,
+end
+
 end nat
