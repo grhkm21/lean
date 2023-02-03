@@ -48,3 +48,12 @@ end
 --          Map atoms
 -- 
 -- Commutes
+--
+-- Steps:
+-- 1. Define (enum?) atoms
+-- 2. Prove that if atom1.last != atom2.head, then
+--    look_and_say (atom1 || atom2) = look_and_say atom1 || look_and_say atom2
+-- 3. Prove the same statement but for the concatenation of multiple atoms (by induction)
+-- 4. Prove that look_and_say atom is concatenation of atoms
+-- 5. Prove there exists n such that look_and_say n [ 1 ] is eventually always consisting of atoms
+-- 6. *Somehow* link this to the adjacency matrix of the graph network and prove the length ratio

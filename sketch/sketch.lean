@@ -194,13 +194,42 @@ begin
   dec_trivial,
 end
 
-example : true :=
+example : ↑(↑(3 : ℤ) / ↑(2 : ℤ) : ℚ).denom = (2 : ℤ) :=
 begin
-  let real_basis := basis.of_vector_space ℚ ℝ,
-  let real_index_set := basis.of_vector_space_index ℚ ℝ,
-  let f_map := λ index, (0 : ℝ),
-  let f : ℝ → ℝ := real_basis.constr ℝ f_map,
-  dsimp [basis.constr] at f,
+  rw rat.denom_div_eq_of_coprime; norm_num,
 end
+
+example {a b c : ℚ} : a / b * c = a * c / b :=
+begin
+  simp only [div_eq_mul_inv, mul_assoc, mul_comm b⁻¹ c],
+end
+
+example {q : ℚ} {c : ℤ}
+  (h : ↑q.denom ∣ q.num * c)
+  (h' : coprime q.denom q.num.nat_abs)
+: ↑q.denom ∣ c :=
+begin
+  exact int.dvd_of_dvd_mul_right_of_gcd_one h h',
+end
+
+example {a b : ℤ} : (a : ℚ) * (b : ℚ) = ↑(a * b) :=
+begin
+  rw int.cast_mul,
+end
+
+example {a b c : ℤ} (h : a ∣ c) : a ∣ b * c :=
+begin
+  exact dvd_mul_of_dvd_right h b,
+end
+
+example {a b c : ℕ} (h : a ∣ b) : a ∣ b.lcm c :=
+begin
+  exact dvd_trans h (nat.dvd_lcm_left _ _),
+end
+
+example {p q : Prop} (h : ¬p ↔ ¬q) : p ↔ q :=
+iff.trans (iff.trans not_not.symm (not_iff_not_of_iff h)) not_not
+
+example {P Q : Prop} (h : P ↔ Q) (h' : Q) : P := (iff.symm h).1 h'
 
 end polynomial

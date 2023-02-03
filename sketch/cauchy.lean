@@ -58,6 +58,8 @@ begin
   simpa using f_hom.map_smul' x 1,
 end
 
+---------------------------------------------------------------------------------------------
+
 example : ∃ f : ℝ → ℝ, (∀ x y, f (x + y) = f x + f y) ∧ (∃ x : ℝ, f x ≠ x * f 1) :=
 begin
   let real_basis := basis.of_vector_space ℚ ℝ,
@@ -109,6 +111,8 @@ end
 
 ---------------------------------
 
+namespace polynomial
+
 example : true :=
 begin
   -- We construct a transcendental (over Q) number x
@@ -130,6 +134,7 @@ begin
     have h' : ∀ (p : ℚ[X]), p ≠ 0 → (polynomial.aeval (liouville.liouville_number ↑3)) p ≠ 0,
     {
       intros p hp,
+      simp [polynomial.aeval, polynomial.eval₂_ring_hom', polynomial.eval₂, polynomial.sum] at h,
       simp [polynomial.aeval, polynomial.eval₂_ring_hom', polynomial.eval₂, polynomial.sum],
       -- Somehow "clear the denominators"
       -- Look at `data.polynomial.denoms_clearable`
@@ -137,4 +142,89 @@ begin
   }
 end
 
+lemma nice_lemma {q : ℚ} {n : ℤ} (h : n ≠ 0) : (q * n).denom = 1 ↔ ↑q.denom ∣ n :=
+begin
+  replace hn : (n : ℚ) ≠ 0, by rwa [ne.def, ← int.cast_zero, rat.coe_int_inj],
+  split; intros h,
+  { rw [← rat.num_div_denom q, div_eq_mul_inv, mul_assoc, mul_comm _ ↑n, ← mul_assoc,
+        ← div_eq_mul_inv, ← int.cast_mul, show (q.denom : ℚ) = ↑(q.denom : ℤ), by exact rfl,
+        rat.denom_div_cast_eq_one_iff] at h,
+    { exact int.dvd_of_dvd_mul_right_of_gcd_one h (coprime.symm q.cop), },
+    { norm_cast, exact rat.denom_ne_zero q, }, },
+  { rw [← rat.num_div_denom q, div_eq_mul_inv, mul_assoc, mul_comm _ ↑n, ← mul_assoc,
+        ← div_eq_mul_inv, ← int.cast_mul, show (q.denom : ℚ) = ↑(q.denom : ℤ), by exact rfl,
+        rat.denom_div_cast_eq_one_iff],
+    { apply dvd_mul_of_dvd_right h, },
+    { norm_cast, exact rat.denom_ne_zero q, }, },
+end
 
+lemma nice_lemma' {q : ℚ} {n : ℕ} (h : n ≠ 0) : (q * n).denom = 1 ↔ q.denom ∣ n :=
+by exact_mod_cast (@nice_lemma _ n $ by exact_mod_cast h)
+
+lemma denoms_clear (l : list ℚ) : ∃ N : ℕ, N ≠ 0 ∧ ∀ q ∈ l, (q * (N : ℚ)).denom = 1 :=
+begin
+  induction l with l hl l_ih,
+  { use 1, simp, },
+  { rcases l_ih with ⟨N, ⟨hN, h⟩⟩,
+    { use (N.lcm l.denom),
+      split,
+      { apply lcm_ne_zero hN (rat.denom_ne_zero l), },
+      { intros q h',
+        rw list.mem_cons_eq at h',
+        change (q * ↑((N : ℕ).lcm l.denom)).denom = 1,
+        cases h',
+        { rw [h', nice_lemma'],
+          { exact nat.dvd_lcm_right _ _, },
+          { apply lcm_ne_zero hN (rat.denom_ne_zero l), }, },
+        { specialize h q h',
+          rw nice_lemma' at *,
+          { exact dvd_trans h (nat.dvd_lcm_left _ _), },
+          { apply lcm_ne_zero hN (rat.denom_ne_zero l), },
+          { exact hN, }, }, }, }, }
+end
+
+example {a : ℕ} (h : a ∉ ({0, 2} : finset ℕ)) : a ≠ 0 :=
+begin
+  by_contradiction h', apply h, simp [h'],
+end
+
+example {p : ℚ[X]} (h : p = C (3 / 2) * X ^ 2 + C 1) : p.support = {0, 2} :=
+begin
+  rw [finset.ext_iff, h],
+  intro a,
+  rw polynomial.mem_support_iff,
+  by_cases h' : a ∈ ({0, 2} : finset ℕ),
+  { fin_cases h',
+    { simp [C_mul_X_pow_eq_monomial, coeff_monomial], },
+    { rw [coeff_add, C_mul_X_pow_eq_monomial, ← monomial_zero_left, coeff_monomial,
+          coeff_monomial],
+      norm_num, }, },
+  { rw [coeff_add, coeff_C, C_mul_X_pow_eq_monomial, coeff_monomial],
+    apply iff.symm (iff.trans (iff.trans not_not.symm (not_iff_not_of_iff _)) not_not),
+    push_neg,
+    rw [iff_true_intro h', true_iff],
+    simp [show a ≠ 0, { by_contradiction h'', apply h', simp [h''], },
+          (show a ≠ 2, { by_contradiction h'', apply h', simp [h''], }).symm], },
+end
+
+example : false :=
+begin
+  let p : ℚ[X] := (3 / 2) * X + 1,
+  let s := p.support,
+  let s' := p.to_finsupp.support,
+  -- construct 3 * X + 2
+  let new_coeff_hom : ℕ →₀ ℚ := {
+    support := p.support,
+    to_fun := λ n, 2 * p.coeff n,
+    mem_support_to_fun := by simp,
+  },
+  let new_p : ℚ[X] := polynomial.of_finsupp new_coeff_hom,
+end
+
+example {x : ℝ} {p : ℚ[X]} (h : polynomial.aeval x p ≠ 0) :
+∃ (p' : ℤ[X]), polynomial.aeval x p' ≠ 0 :=
+begin
+  -- get N
+end
+
+end polynomial
