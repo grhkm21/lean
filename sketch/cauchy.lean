@@ -1,3 +1,4 @@
+import algebra.algebra.basic
 import data.nat.basic
 import data.real.basic
 import data.polynomial.basic
@@ -183,9 +184,16 @@ begin
           { exact hN, }, }, }, }, }
 end
 
-example {a : ℕ} (h : a ∉ ({0, 2} : finset ℕ)) : a ≠ 0 :=
+example : 3 / 2 * X ^ 2 + 7 / 9 * X + 5 = C (3 / 2 : ℚ) * X ^ 2 + C (7 / 9) * X + C 5 :=
 begin
-  by_contradiction h', apply h, simp [h'],
+  -- If you swap orders, it will overwrite 9 = bit1 (bit0 (bit0 (bit1))) -> bit1 (bit0 (C2 * 1))
+  rw (show (9 : ℚ[X]) = C 9 * 1, by simp),
+  rw (show (7 : ℚ[X]) = C 7, by simp),
+  rw (show (5 : ℚ[X]) = C 5 * 1, by simp),
+  rw (show (3 : ℚ[X]) = C 3, by simp),
+  rw (show (2 : ℚ[X]) = C 2 * 1, by simp),
+  simp only [div_C_mul, euclidean_domain.div_one, div_eq_mul_inv, ring_hom.map_mul],
+  simp only [mul_comm, one_mul],
 end
 
 example {p : ℚ[X]} (h : p = C (3 / 2) * X ^ 2 + C 1) : p.support = {0, 2} :=

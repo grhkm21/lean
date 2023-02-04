@@ -6,6 +6,7 @@ import tactic
 import data.matrix.basic
 import number_theory.bernoulli
 import number_theory.bernoulli_polynomials
+import probability.probability_mass_function.basic
 
 open_locale big_operators
 open_locale nat polynomial
@@ -227,9 +228,36 @@ begin
   exact dvd_trans h (nat.dvd_lcm_left _ _),
 end
 
-example {p q : Prop} (h : ¬p ↔ ¬q) : p ↔ q :=
+example {P Q : Prop} (h : ¬P ↔ ¬Q) : P ↔ Q :=
 iff.trans (iff.trans not_not.symm (not_iff_not_of_iff h)) not_not
 
 example {P Q : Prop} (h : P ↔ Q) (h' : Q) : P := (iff.symm h).1 h'
+
+example {P Q : Prop} (h': P) : P ↔ Q :=
+begin
+  rw [iff_true_intro h', true_iff],
+end
+
+example {α : Type*} [non_assoc_ring α] (m n : ℤ) : ((m * n : ℤ) : α) = m * n :=
+begin
+  refine int.induction_on' m 0 _ _ _,
+  { simp },
+  { intros _ ih, simp [add_mul, ih] },
+  { intros _ ih, simp [sub_mul, ih] },
+end
+
+example {α : Type*} [division_ring α] [char_zero α] (q : ℚ) :
+(q : α) = ↑q.num / ↑q.denom :=
+begin
+  conv_lhs { rw ← rat.num_div_denom q },
+  rw [rat.cast_div, rat.cast_coe_int, rat.cast_coe_nat],
+end
+
+example {f : ℕ+ → ℚ} (h : summable f): summable (λ n : ℕ+, f n * n / n) :=
+begin
+  -- simp_rw looks inside binders like λ
+  -- You have to provide the full statement, hence the `show ∀ ...` then `_`
+  simp_rw [← mul_div, div_self ((show ∀ n : ℕ+, (n : ℚ) ≠ 0, by simp) _), mul_one, h],
+end
 
 end polynomial
