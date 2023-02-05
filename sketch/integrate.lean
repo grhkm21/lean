@@ -71,13 +71,7 @@ begin
   exact pow_le_pow_of_le_left (aux_bound1 h h') (aux_bound2 h h') n,
 end
 
-example {n : ℕ} : interval_integrable (λ x, x ^ n) volume 0 1 :=
-continuous.interval_integrable (continuous_pow n) _ _
-
-example {f g : ℝ → ℝ} (h : continuous f) (h' : continuous g) : continuous (f * g) :=
-continuous.mul h h'
-
-example {n : ℕ} : ∫ x : ℝ in 0..1, x ^ n * (1 - x) ^ n ≤ 1 / 4 ^ n :=
+lemma aux_integral_bound {n : ℕ} : ∫ x : ℝ in 0..1, x ^ n * (1 - x) ^ n ≤ 1 / 4 ^ n :=
 begin
   rw [show 1 / 4 ^ n = ∫ x : ℝ in 0..1, (1 : ℝ) / 4 ^ n, by simp],
   apply integral_mono_on zero_le_one _ _,
@@ -148,7 +142,7 @@ begin
       exact nat.prime.pos hp, },
     { rw [pow_add, pow_one],
       by_cases h : nat.log p n < n.succ.factorization p,
-      -- case 1
+      -- case 1, hard case
       { rw max_eq_right_of_lt h,
         rw [← pow_one p] { occs := occurrences.pos [3] },
         rw [← pow_add],
@@ -181,7 +175,16 @@ begin
         apply lt_of_le_of_lt h''',
         apply nat.mul_lt_mul_of_pos_right _ (nat.prime.pos hp),
         apply nat.pow_log_succ_upper ⟨nat.prime.two_le hp, ne_of_gt hn⟩, },
-      { sorry } }, },
+      -- case 2, easy case
+      { push_neg at h,
+        rw max_eq_left h,
+        rw [← pow_one p] { occs := occurrences.pos [3] },
+        rw [← pow_add],
+        let h' := nat.pow_log_succ_upper ⟨nat.prime.two_le hp, ne_of_gt hn⟩,
+        rw [← nat.succ_le_iff, le_iff_lt_or_eq] at h',
+        cases h',
+        { exact h' },
+        { rw [h', nat.prime.factorization_pow hp, finsupp.single_eq_same] at h, linarith, }, } }, },
   { right, exact ⟨nat.prime.two_le hp, nat.succ_ne_zero n⟩, }
 end
 
