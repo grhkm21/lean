@@ -27,13 +27,13 @@ end
 
 def poisson (l : ℝ) (h : 0 < l) : pmf ℕ :=
 ⟨ λ k, ennreal.of_real $ (real.exp $ -l) * ((l : ℝ) ^ k) / factorial k,
-  by {
-    simp [summable.has_sum_iff],
+  by { simp [summable.has_sum_iff],
     rw ← ennreal.of_real_tsum_of_nonneg,
     { rw [show 1 = ennreal.of_real (real.exp (-l) * real.exp l),
           by rw [real.exp_eq_exp_ℝ, ← exp_add, neg_add_self, exp_zero, ennreal.of_real_one]],
       congr,
-      suffices : ∑' (n : ℕ), (λ k, l ^ k / ↑(factorial k)) n * real.exp (-l) = real.exp (-l) * real.exp l,
+      suffices : ∑' (n : ℕ), (λ k, l ^ k / ↑(factorial k)) n * real.exp (-l)
+                 = real.exp (-l) * real.exp l,
       { rw ← this, congr, funext, ring_nf, },
       rw [mul_comm],
       simp_rw [← smul_eq_mul],
@@ -48,7 +48,7 @@ def poisson (l : ℝ) (h : 0 < l) : pmf ℕ :=
       exact cast_le.2 (le_of_lt (factorial_pos n)), },
     { have : summable (λ (n : ℕ), real.exp (-l) • (λ i, l ^ i / ↑(factorial i)) n),
       { apply summable.const_smul, simp [real.summable_pow_div_factorial l], },
-      { simp at this, simp_rw [← mul_div, this], }, },
-  }⟩
+      simp at this,
+      simp_rw [← mul_div, this], }, }⟩
 
 end pmf
