@@ -196,21 +196,20 @@ begin
                nat.succ_ne_zero, or_self, not_false_iff], }
 end
 
-lemma nat.factorization_lcm_Icc_prime {p n : ℕ} (hp : prime p) (hn : 0 < n) :
+lemma nat.factorization_lcm_Icc_prime {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
 nat.factorization ((Icc 1 n).lcm id) p = nat.log p n :=
 begin
-  induction n with k hk,
-  { exfalso, exact (lt_self_iff_false 0).1 hn, },
-  induction k with k hk',
-  { simp only [Icc_self, lcm_singleton, id.def, normalize_eq, nat.factorization_one,
-               finsupp.coe_zero, pi.zero_apply, nat.log_one_right], },
-  { rw nat.Icc_succ_right,
+  let P := λ n, nat.factorization ((Icc 1 n).lcm id) p = nat.log p n,
+  have hP₁ : P 1,
+  { norm_num [P, Icc_self 1, lcm_singleton], },
+  apply nat.le_induction hP₁ _ n,
+  { apply hn, },
+  { dsimp [P],
+    intros n hn hP,
+    rw nat.Icc_succ_right,
     simp only [nat.succ_eq_add_one, add_assoc, one_add_one_eq_two] at *,
-    rw finset.lcm_insert,
-    specialize hk (nat.cast_add_one_pos k),
-    rw [id.def, lcm_eq_nat_lcm, nat.factorization_lcm _ nat.lcm_Icc_ne_zero],
-    { rw [finsupp.sup_apply, hk, sup_eq_max], sorry },
-    simp only [ne.def, add_eq_zero_iff, two_ne_zero, and_false, not_false_iff], },
+    rw [finset.lcm_insert, id.def, lcm_eq_nat_lcm, nat.factorization_lcm (nat.succ_ne_zero n)
+        nat.lcm_Icc_ne_zero, finsupp.sup_apply, hP, sup_eq_max, nat.log_succ hp hn, max_comm], },
 end
 
 -- let's not touch this for now...
