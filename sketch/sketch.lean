@@ -5,13 +5,14 @@ import data.real.basic
 import tactic
 import data.matrix.basic
 import number_theory.bernoulli
+import number_theory.von_mangoldt
 import number_theory.bernoulli_polynomials
 import probability.probability_mass_function.basic
 
 open_locale big_operators
 open_locale nat polynomial
 
-open nat finset
+open nat real finset
 
 example {a b : ℕ} (h : a < b) : a + 1 ≤ b :=
 begin
@@ -246,7 +247,7 @@ begin
   { intros _ ih, simp [sub_mul, ih] },
 end
 
-example {α : Type*} [division_ring α] [char_zero α] (q : ℚ) :
+example {α : Type*} [division_ring α] [char_zero α] (q :a ℚ) :
 (q : α) = ↑q.num / ↑q.denom :=
 begin
   conv_lhs { rw ← rat.num_div_denom q },
@@ -261,3 +262,11 @@ begin
 end
 
 end polynomial
+
+example {n : ℕ} {S : finset ℕ} (h : S = filter nat.prime (Icc 1 n)):
+S.sum (λ p, ite (nat.prime p) 1 0) = S.sum (λ p, 1) :=
+begin
+  -- rw finset.sum_congr,
+  simp,
+  -- show_term { squeeze_simp [h] },
+end

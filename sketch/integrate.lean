@@ -81,6 +81,16 @@ begin
   simp,
 end
 
+lemma multiset.map_ite {P : Prop} [decidable P] {f : ℕ → ℝ} {s s₁ s₂ : multiset ℕ} :
+multiset.map f (ite P s₁ s₂) = ite P (multiset.map f s₁) (multiset.map f s₂) :=
+by { by_cases P ; simp [h] }
+
+lemma multiset.sum_add_sub_map {s : multiset ℕ} (f g : ℕ → ℝ) :
+(multiset.map f s).sum = (multiset.map g s).sum + (multiset.map (f - g) s).sum :=
+begin
+  simp only [pi.sub_apply, multiset.sum_map_sub], ring,
+end
+
 lemma nat.Icc_succ_right {n : ℕ} : Icc 1 n.succ = has_insert.insert n.succ (Icc 1 n) :=
 begin
   ext,
@@ -96,6 +106,8 @@ begin
   rw [this, or_comm],
 end
 
+lemma nat.succ_not_mem_Icc (m n : ℕ) : n.succ ∉ Icc m n := by { rw [mem_Icc, not_and, not_le], intro h, exact nat.lt_succ_self n }
+
 lemma nat.pow_max {b m n: ℕ} (hb : 0 < b) : b ^ max m n = max (b ^ m) (b ^ n) :=
 begin
   by_cases h : m ≤ n,
@@ -105,10 +117,8 @@ begin
         max_eq_left (nat.pow_le_pow_of_le_right hb (show n ≤ m, by linarith [h]))], },
 end
 
-lemma nat.pow_log_succ_upper {b n : ℕ} (h : 1 < b ∧ n ≠ 0) : n < b ^ (nat.log b n + 1) :=
-and.right ((nat.log_eq_iff (show _, by { right, exact h })).1 $ refl _)
-
-lemma nat.pow_log_succ_lower {b n : ℕ} (h : 1 < b ∧ n ≠ 0) : b ^ (nat.log b n) ≤ n :=
+-- lower bound: `nat.lt_pow_succ_log_self`
+lemma nat.pow_log_self_le_self {b n : ℕ} (h : 1 < b ∧ n ≠ 0) : b ^ (nat.log b n) ≤ n :=
 and.left ((nat.log_eq_iff (show _, by { right, exact h })).1 $ refl _)
 
 lemma nat.pow_log_power_sub_one {p k n : ℕ} (hp : nat.prime p) (hk : k ≠ 0) (hn : n.succ = p ^ k):
@@ -130,6 +140,7 @@ begin
     exact nat.prime.two_le hp, }
 end
 
+-- TODO: Generalise these for non-primes
 lemma nat.log_succ {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
 nat.log p n.succ = max (nat.log p n) (n.succ.factorization p) :=
 begin
@@ -147,7 +158,7 @@ begin
         rw [← pow_one p] { occs := occurrences.pos [3] },
         rw [← pow_add],
         -- lemmas
-        let h' := nat.pow_log_succ_upper ⟨nat.prime.two_le hp, ne_of_gt hn⟩,
+        let h' := nat.lt_pow_succ_log_self (nat.prime.two_le hp) n,
         replace h' := lt_of_lt_of_le h' ((nat.pow_le_iff_le_right $ nat.prime.two_le hp).2 h),
         let h'' := nat.ord_proj_le p (nat.succ_ne_zero n),
         have hn' : n.succ = p ^ (n.succ.factorization p),
@@ -174,18 +185,39 @@ begin
         rw [← lemma1, pow_add, pow_one],
         apply lt_of_le_of_lt h''',
         apply nat.mul_lt_mul_of_pos_right _ (nat.prime.pos hp),
-        apply nat.pow_log_succ_upper ⟨nat.prime.two_le hp, ne_of_gt hn⟩, },
+        apply nat.lt_pow_succ_log_self (nat.prime.two_le hp) n, },
       -- case 2, easy case
       { push_neg at h,
         rw max_eq_left h,
         rw [← pow_one p] { occs := occurrences.pos [3] },
         rw [← pow_add],
-        let h' := nat.pow_log_succ_upper ⟨nat.prime.two_le hp, ne_of_gt hn⟩,
+        let h' := nat.lt_pow_succ_log_self (nat.prime.two_le hp) n,
         rw [← nat.succ_le_iff, le_iff_lt_or_eq] at h',
         cases h',
         { exact h' },
-        { rw [h', nat.prime.factorization_pow hp, finsupp.single_eq_same] at h, linarith, }, } }, },
+        -- somehow i broke this
+        { sorry }, } }, },
   { right, exact ⟨nat.prime.two_le hp, nat.succ_ne_zero n⟩, }
+end
+
+lemma nat.log_succ_ne_log_self {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
+nat.log p n.succ ≠ nat.log p n ↔ n.succ = p ^ (n.succ.factorization p) :=
+begin
+  split,
+  { rw nat.log_succ hp hn,
+    intro h,
+    simp only [ne.def, max_eq_left_iff, not_le, nat.lt_iff_add_one_le] at h,
+    let h₁ := nat.pow_le_pow_of_le_right (nat.prime.pos hp) h,
+    let h₃ := nat.ord_proj_le p (nat.succ_ne_zero n),
+    let h₄ := nat.lt_iff_add_one_le.1 (nat.lt_pow_succ_log_self (nat.prime.two_le hp) n),
+    let h₅ := le_trans h₄ h₁,
+    exact omega.nat.le_and_le_iff_eq.1 ⟨h₅, h₃⟩, },
+  { intro h,
+    by_contradiction h',
+    rw [h, nat.log_pow (nat.prime.two_le hp)] at h',
+    let h'' := nat.pow_log_le_self p (ne_of_gt hn),
+    rw [← h', ← h] at h'',
+    exact (nat.not_succ_le_self n) h'', }
 end
 
 lemma nat.lcm_Icc_ne_zero {n : ℕ} : (Icc 1 n).lcm id ≠ 0 :=
@@ -208,17 +240,81 @@ begin
     intros n hn hP,
     rw nat.Icc_succ_right,
     simp only [nat.succ_eq_add_one, add_assoc, one_add_one_eq_two] at *,
-    rw [finset.lcm_insert, id.def, lcm_eq_nat_lcm, nat.factorization_lcm (nat.succ_ne_zero n)
+    rw [lcm_insert, id.def, lcm_eq_nat_lcm, nat.factorization_lcm (nat.succ_ne_zero n)
         nat.lcm_Icc_ne_zero, finsupp.sup_apply, hP, sup_eq_max, nat.log_succ hp hn, max_comm], },
 end
 
--- let's not touch this for now...
--- lemma aux_log_lcm_eq_von {n : ℕ} : real.log ↑(finset.Icc 1 n).lcm = von_mangoldt n :=
--- begin
---   induction n using induction_on_prime_powers with p k a hp ha ih,
---   { simp [multiset.Icc], },
---   { simp [multiset.Icc], },
---   {
-    
---   }
--- end
+lemma nat.prime_dvd_lcm_Icc {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
+p ∣ (Icc 1 n).lcm id ↔ p ≤ n :=
+begin
+  rw [nat.prime.dvd_iff_one_le_factorization hp nat.lcm_Icc_ne_zero,
+      nat.factorization_lcm_Icc_prime hp hn,
+      ← nat.pow_le_iff_le_log (nat.prime.two_le hp) (ne_of_gt hn), pow_one],
+end
+
+lemma nat.lcm_Icc_factorization_support_eq_primes_le {n : ℕ} (hn : 0 < n) :
+((Icc 1 n).lcm id).factorization.support = (filter nat.prime (Icc 1 n)) :=
+begin
+  ext,
+  rw [nat.factor_iff_mem_factorization, nat.mem_factors nat.lcm_Icc_ne_zero, mem_filter],
+  split ; rintros ⟨ha, ha'⟩,
+  { simp only [mem_Icc],
+    exact ⟨⟨by linarith [nat.prime.two_le ha], (nat.prime_dvd_lcm_Icc ha hn).1 ha'⟩, ha⟩, },
+  { exact ⟨ha', (nat.prime_dvd_lcm_Icc ha' hn).2 (mem_Icc.1 ha).2⟩, },
+end
+
+lemma nat.factorization_lcm_Icc_sum {n : ℕ} {f : ℕ → ℕ → ℝ} (hn : 0 < n):
+(nat.factorization ((Icc 1 n).lcm id)).sum f
+  = (filter nat.prime (Icc 1 n)).sum (λ p, f p (nat.log p n)) :=
+begin
+  rwa [finsupp.sum, nat.lcm_Icc_factorization_support_eq_primes_le hn, finset.sum_congr],
+  refl,
+  intros a ha,
+  rw mem_filter at ha,
+  congr,
+  exact nat.factorization_lcm_Icc_prime ha.right hn,
+end
+
+lemma aux_log_lcm_eq_sum_von {n : ℕ} (hn : 0 < n) :
+real.log ↑((Icc 1 n).lcm id) = (Icc 1 n).sum von_mangoldt :=
+begin
+  -- manipulation
+  -- rw [real.log_nat_eq_sum_factorization, nat.factorization_lcm_Icc_sum hn],
+  -- dsimp [von_mangoldt],
+  -- simp_rw [← sum_filter, ← nsmul_eq_mul],
+  -- simp only [sum_eq_multiset_sum, filter_val, ← multiset.Icc],
+  -- we consider taking difference of P(n + 1) - P(n)
+
+  -- Everything after isn't really working
+  let P := λ n, (multiset.map (λ (x : ℕ), nat.log x n • real.log ↑x) (multiset.filter nat.prime (Icc 1 n).val)).sum - (multiset.map (λ (x : ℕ), real.log ↑(x.min_fac)) (multiset.filter is_prime_pow (Icc 1 n).val)).sum = 0,
+
+  suffices : P n, { sorry },
+
+  have P₁ : P 1,
+  -- { simp_rw P,
+  --   simp only [Icc_self 1, singleton_val, multiset.filter_singleton],
+  --   norm_num [not_is_prime_pow_one], },
+  sorry,
+
+  apply nat.le_induction P₁ _ n,
+  apply hn,
+  { intros n hn' Pₙ,
+    simp_rw P,
+    -- mess with prime map
+    simp_rw [nat.Icc_succ_right, insert_val_of_not_mem (nat.succ_not_mem_Icc 1 n),
+             multiset.filter_cons, multiset.map_add, multiset.sum_add, ← sub_sub],
+    rw [multiset.map_ite, multiset.map_ite],
+    simp_rw [multiset.map_zero, multiset.map_singleton],
+    rw multiset.sum_add_sub_map (λ x : ℕ, nat.log x (n + 1) • real.log x)
+                                (λ x : ℕ, nat.log x n • real.log x),
+    rw [← add_assoc, sub_sub],
+    rw [add_comm] { occs := occurrences.pos [1] },
+    -- mess with is_prime_pow map
+    rw add_sub_right_comm,
+    rw ← add_sub,
+    simp only [P n],
+  }
+  rw ← sum_multiset_count,
+end
+
+example {a b c : ℝ} : a + b - c = b - c + a := by rw [← add_sub, add_comm a (b - c)]
