@@ -275,46 +275,86 @@ begin
   exact nat.factorization_lcm_Icc_prime ha.right hn,
 end
 
+-- Thank you Eric Wieser for helping!
+lemma aux_prime_pow_partition {n : ℕ} : (Icc 1 n).filter is_prime_pow =
+((Icc 1 n).filter nat.prime).bUnion (λ p, (Icc 1 (nat.log p n)).image (λ k, p ^ k)) :=
+begin
+  ext,
+  simp only [mem_filter],
+  split,
+  { rintros ⟨ha, h⟩,
+    rcases h with ⟨p, ⟨k, ⟨hp, hk, hpk⟩⟩⟩,
+    replace hp := prime.nat_prime hp,
+    rw [← hpk, mem_bUnion],
+    use p,
+    split,
+    { simp only [mem_filter, mem_Icc, hp, and_true, nat.add_one_le_iff, nat.prime.pos hp, true_and],
+      apply le_trans _ (mem_Icc.1 ha).right,
+      simp only [← hpk, nat.le_self_pow (ne_of_gt hk) p], },
+    rw mem_image,
+    use k,
+    simp only [and_true, eq_self_iff_true, mem_Icc, nat.add_one_le_iff, hk, true_and],
+    apply nat.le_log_of_pow_le (nat.prime.two_le hp),
+    rw hpk,
+    exact (mem_Icc.1 ha).right, },
+  { intros h,
+    simp only [mem_bUnion, mem_filter, mem_image, mem_Icc] at h,
+    rcases h with ⟨p, ⟨⟨hp₁, hp₂⟩, hp⟩, ⟨k, ⟨hk₁, hk₂⟩, hk⟩⟩,
+    simp only [mem_Icc, is_prime_pow, prime.nat_prime],
+    split,
+    rw ← hk,
+    split,
+    exact pow_pos (nat.prime.pos hp) k,
+    exact nat.pow_le_of_le_log (show n ≠ 0, by linarith [hp₂, nat.prime.pos hp]) hk₂,
+    use p,
+    use k,
+    exact ⟨nat.prime_iff.1 hp, hk₁, hk⟩, }
+end
+
 lemma aux_log_lcm_eq_sum_von {n : ℕ} (hn : 0 < n) :
 real.log ↑((Icc 1 n).lcm id) = (Icc 1 n).sum von_mangoldt :=
 begin
-  -- manipulation
-  -- rw [real.log_nat_eq_sum_factorization, nat.factorization_lcm_Icc_sum hn],
-  -- dsimp [von_mangoldt],
-  -- simp_rw [← sum_filter, ← nsmul_eq_mul],
-  -- simp only [sum_eq_multiset_sum, filter_val, ← multiset.Icc],
-  -- we consider taking difference of P(n + 1) - P(n)
-
-  -- Everything after isn't really working
-  let P := λ n, (multiset.map (λ (x : ℕ), nat.log x n • real.log ↑x) (multiset.filter nat.prime (Icc 1 n).val)).sum - (multiset.map (λ (x : ℕ), real.log ↑(x.min_fac)) (multiset.filter is_prime_pow (Icc 1 n).val)).sum = 0,
-
-  suffices : P n, { sorry },
-
-  have P₁ : P 1,
-  -- { simp_rw P,
-  --   simp only [Icc_self 1, singleton_val, multiset.filter_singleton],
-  --   norm_num [not_is_prime_pow_one], },
-  sorry,
-
-  apply nat.le_induction P₁ _ n,
-  apply hn,
-  { intros n hn' Pₙ,
-    simp_rw P,
-    -- mess with prime map
-    simp_rw [nat.Icc_succ_right, insert_val_of_not_mem (nat.succ_not_mem_Icc 1 n),
-             multiset.filter_cons, multiset.map_add, multiset.sum_add, ← sub_sub],
-    rw [multiset.map_ite, multiset.map_ite],
-    simp_rw [multiset.map_zero, multiset.map_singleton],
-    rw multiset.sum_add_sub_map (λ x : ℕ, nat.log x (n + 1) • real.log x)
-                                (λ x : ℕ, nat.log x n • real.log x),
-    rw [← add_assoc, sub_sub],
-    rw [add_comm] { occs := occurrences.pos [1] },
-    -- mess with is_prime_pow map
-    rw add_sub_right_comm,
-    rw ← add_sub,
-    simp only [P n],
-  }
-  rw ← sum_multiset_count,
+  -- framework by Eric
+  rw [real.log_nat_eq_sum_factorization, nat.factorization_lcm_Icc_sum hn],
+  dsimp [von_mangoldt],
+  simp_rw [← sum_filter, ← real.log_pow, ← nat.cast_pow],
+  rw [← real.log_prod _ _ (λ i hi, _), ← real.log_prod _ _ (λ i hi, _)],
+  { congr' 1,
+    simp_rw [← nat.cast_prod, nat.cast_inj],
+    rw [aux_prime_pow_partition, prod_bUnion],
+    { rw prod_congr ((true_implies_iff _).1 (eq_self_iff_true _).2),
+      intros p hp,
+      rw [mem_filter, mem_Icc] at hp,
+      rw prod_image,
+      { transitivity (∏ x in Icc 1 (nat.log p n), p),
+        { rw [prod_const, nat.card_Icc, nat.add_sub_cancel], },
+        { apply prod_congr ((true_implies_iff _).1 (eq_self_iff_true _).2),
+          intros x hx,
+          rw nat.prime.pow_min_fac hp.right (ne_of_gt (mem_Icc.1 hx).1), }, },
+      { intros x hx y hy h,
+        exact nat.pow_right_injective (nat.prime.two_le hp.2) h, }, },
+    { intros i hi j hj hij,
+      simp_rw [mem_coe, mem_filter] at hi hj,
+      rw [function.on_fun, disjoint_left],
+      -- prove the families are disjoint
+      intro a,
+      simp only [mem_image],
+      push_neg,
+      rintros ⟨k₁, hk₁, hk₁'⟩,
+      intros k₂ hk₂,
+      rw ← hk₁',
+      by_contradiction,
+      have : nat.factorization (j ^ k₂) i = nat.factorization (i ^ k₁) i,
+      { rw h, },
+      simp only [nat.prime.factorization_pow, hi.2, hj.2, finsupp.single_eq_same,
+                 finsupp.single_eq_of_ne (hij.symm)] at this,
+      linarith [this, (mem_Icc.1 hk₁).1], }, },
+  { norm_cast,
+    exact (nat.min_fac_pos _).ne' },
+  { norm_cast,
+    -- easy :)
+    rw [mem_filter, mem_Icc] at hi,
+    rw pow_eq_zero_iff,
+    linarith [hi.1.1],
+    apply nat.log_pos (nat.prime.two_le hi.2) hi.1.2, },
 end
-
-example {a b c : ℝ} : a + b - c = b - c + a := by rw [← add_sub, add_comm a (b - c)]
