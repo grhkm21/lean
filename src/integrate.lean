@@ -1,12 +1,13 @@
+import analysis.special_functions.integrals
 import data.nat.basic
 import data.real.basic
 import data.list.intervals
-import number_theory.von_mangoldt
 import measure_theory.integral.interval_integral
+import number_theory.von_mangoldt
 import tactic
 
-open real finset measure_theory interval_integral nat.arithmetic_function
-open_locale nat big_operators
+open finset measure_theory interval_integral nat.arithmetic_function
+open_locale nat big_operators arithmetic_function
 
 /-
 Exercise 1.1.25
@@ -228,22 +229,6 @@ begin
                nat.succ_ne_zero, or_self, not_false_iff], }
 end
 
-lemma nat.factorization_lcm_Icc_prime {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
-nat.factorization ((Icc 1 n).lcm id) p = nat.log p n :=
-begin
-  let P := λ n, nat.factorization ((Icc 1 n).lcm id) p = nat.log p n,
-  have hP₁ : P 1,
-  { norm_num [P, Icc_self 1, lcm_singleton], },
-  apply nat.le_induction hP₁ _ n,
-  { apply hn, },
-  { dsimp [P],
-    intros n hn hP,
-    rw nat.Icc_succ_right,
-    simp only [nat.succ_eq_add_one, add_assoc, one_add_one_eq_two] at *,
-    rw [lcm_insert, id.def, lcm_eq_nat_lcm, nat.factorization_lcm (nat.succ_ne_zero n)
-        nat.lcm_Icc_ne_zero, finsupp.sup_apply, hP, sup_eq_max, nat.log_succ hp hn, max_comm], },
-end
-
 lemma nat.prime_dvd_lcm_Icc {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
 p ∣ (Icc 1 n).lcm id ↔ p ≤ n :=
 begin
@@ -261,6 +246,22 @@ begin
   { simp only [mem_Icc],
     exact ⟨⟨by linarith [nat.prime.two_le ha], (nat.prime_dvd_lcm_Icc ha hn).1 ha'⟩, ha⟩, },
   { exact ⟨ha', (nat.prime_dvd_lcm_Icc ha' hn).2 (mem_Icc.1 ha).2⟩, },
+end
+
+lemma nat.factorization_lcm_Icc_prime {p n : ℕ} (hp : nat.prime p) (hn : 0 < n) :
+nat.factorization ((Icc 1 n).lcm id) p = nat.log p n :=
+begin
+  let P := λ n, nat.factorization ((Icc 1 n).lcm id) p = nat.log p n,
+  have hP₁ : P 1,
+  { norm_num [P, Icc_self 1, lcm_singleton], },
+  apply nat.le_induction hP₁ _ n,
+  { apply hn, },
+  { dsimp [P],
+    intros n hn hP,
+    rw nat.Icc_succ_right,
+    simp only [nat.succ_eq_add_one, add_assoc, one_add_one_eq_two] at *,
+    rw [lcm_insert, id.def, lcm_eq_nat_lcm, nat.factorization_lcm (nat.succ_ne_zero n)
+        nat.lcm_Icc_ne_zero, finsupp.sup_apply, hP, sup_eq_max, nat.log_succ hp hn, max_comm], },
 end
 
 lemma nat.factorization_lcm_Icc_sum {n : ℕ} {f : ℕ → ℕ → ℝ} (hn : 0 < n):
@@ -306,13 +307,12 @@ begin
     split,
     exact pow_pos (nat.prime.pos hp) k,
     exact nat.pow_le_of_le_log (show n ≠ 0, by linarith [hp₂, nat.prime.pos hp]) hk₂,
-    use p,
-    use k,
+    use [p, k],
     exact ⟨nat.prime_iff.1 hp, hk₁, hk⟩, }
 end
 
 lemma aux_log_lcm_eq_sum_von {n : ℕ} (hn : 0 < n) :
-real.log ↑((Icc 1 n).lcm id) = (Icc 1 n).sum von_mangoldt :=
+real.log ↑((Icc 1 n).lcm id) = (Icc 1 n).sum Λ :=
 begin
   -- framework by Eric
   rw [real.log_nat_eq_sum_factorization, nat.factorization_lcm_Icc_sum hn],
@@ -358,3 +358,69 @@ begin
     linarith [hi.1.1],
     apply nat.log_pos (nat.prime.two_le hi.2) hi.1.2, },
 end
+
+lemma eval_integral_thing_idk {N : ℕ} {a : ℕ → ℝ} :
+∫ x : ℝ in 0..1, ∑ n in range N, (a n) * x ^ n = ∑ n in range N, a n / ↑(n + 1) :=
+begin
+  rw interval_integral.integral_finset_sum,
+  -- swap signs since it's finite sum
+  simp_rw [integral_const_mul, nat.cast_add, algebra_map.coe_one, integral_pow],
+  norm_num [mul_div],
+  -- prove integrable
+  { intros k hk,
+    simp only [interval_integral.interval_integrable.const_mul, interval_integrable_pow], },
+end
+
+lemma aux_exp_mul_int {n : ℕ} :
+∃ N : ℤ, ↑N = ↑((Icc 1 (2 * n + 1)).lcm id) * (∫ x : ℝ in 0..1, x ^ n * (1 - x) ^ n) :=
+begin
+  -- plan: directly evaluate the integral
+  simp_rw [show ∀ x : ℝ, 1 - x = 1 + (-x), by { intro x, ring }, add_pow, mul_sum],
+  rw interval_integral.integral_finset_sum,
+  { -- evaluating the integral
+    -- simp only [neg_pow, one_pow] { single_pass := tt },
+    -- simp_rw [← mul_assoc, mul_comm, integral_const_mul],
+    -- simp only [one_pow, one_mul, ← mul_assoc, ← pow_add],
+    -- simp_rw [mul_comm _ ((-(1 : ℝ)) ^ _), integral_const_mul, ← mul_assoc, integral_pow],
+    -- norm_num [mul_div],
+    suffices : ∃ (N : ℤ), (N : ℝ) = ↑((Icc 1 (n * 2 + 1)).lcm id) * ∑ (x : ℕ) in range (n + 1), (n.choose x) * (-1) ^ (n - x) / (↑(n - x) + ↑n + 1),
+    sorry,
+    rw mul_comm,
+    rw sum_mul,
+    conv in (finset.sum _ _) {
+      apply_congr,
+      skip,
+      rw nat.cast_sub (mem_range_succ_iff.1 H),
+      rw div_mul_comm,
+    },
+    -- abstract fraction part into single coefficient
+    let f : ℕ → ℤ := λ x, (Icc 1 (n * 2 + 1)).lcm (coe : ℕ → ℤ) / (↑n - x + ↑n + 1),
+    have : ∀ x ∈ range (n + 1), ((f x) : ℝ) = ↑((Icc 1 (n * 2 + 1)).lcm id) / (↑n - ↑x + ↑n + 1),
+    { intros x hx, simp [f], rw int.cast_div _ _, simp, },
+    conv in (_ / _) {
+
+    }
+  },
+end
+
+#eval (int.lcm 4 6)
+#eval (int.lcm 4 (-6))
+#eval (int.lcm (-4) 6)
+#eval (int.lcm (-4) (-6))
+
+example {n : ℕ} {a : ℕ → ℤ} :
+∃ (N : ℤ), (N : ℝ) = ∑ (x : ℕ) in range (n + 1), ↑(n.choose x) * (-1) ^ (n - x) * (a n : ℝ) :=
+begin
+  simp_rw [show (-1 : ℝ) = ↑(-1 : ℤ), by rw [int.cast_neg, algebra_map.coe_one], ← int.cast_pow],
+  conv in (↑(nat.choose _ _)) { rw [← int.cast_coe_nat], },
+  simp only [← int.cast_mul, ← int.cast_sum, exists_apply_eq_apply],
+end
+
+lemma asdf (i j : ℕ) : ↑(nat.lcm i j) = gcd_monoid.lcm i j := rfl
+
+example {f : ℕ → ℕ} {n : ℕ} : (range (n + 1)).sum f = (range n).sum f + f n :=
+begin
+  simp,
+end
+
+-- lemma aux_lemma3 {n : ℕ} : 

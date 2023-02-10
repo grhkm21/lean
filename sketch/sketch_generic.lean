@@ -1,18 +1,20 @@
+import analysis.special_functions.integrals
 import data.nat.basic
 import data.nat.prime
 import data.nat.prime_norm_num
 import data.real.basic
-import tactic
 import data.matrix.basic
+import measure_theory.measure.measure_space
+import measure_theory.integral.interval_integral
 import number_theory.bernoulli
-import number_theory.von_mangoldt
 import number_theory.bernoulli_polynomials
+import number_theory.von_mangoldt
+import number_theory.well_approximable
 import probability.probability_mass_function.basic
+import tactic
 
-open_locale big_operators
-open_locale nat polynomial
-
-open nat real finset
+open nat real ennreal finset measure_theory interval_integral nat.arithmetic_function
+open_locale nat ennreal interval measure_theory polynomial big_operators arithmetic_function
 
 example {a b : ℕ} (h : a < b) : a + 1 ≤ b :=
 begin
@@ -247,7 +249,7 @@ begin
   { intros _ ih, simp [sub_mul, ih] },
 end
 
-example {α : Type*} [division_ring α] [char_zero α] (q :a ℚ) :
+example {α : Type*} [division_ring α] [char_zero α] (q : ℚ) :
 (q : α) = ↑q.num / ↑q.denom :=
 begin
   conv_lhs { rw ← rat.num_div_denom q },
@@ -269,4 +271,160 @@ begin
   -- rw finset.sum_congr,
   simp,
   -- show_term { squeeze_simp [h] },
+end
+
+-- Approach 1, using `conv`
+example {n : ℕ} : ∫ x : ℝ in 0..1, (-x) ^ n = (-1) ^ n * 1 / (n + 1) :=
+begin
+  conv {
+    to_lhs,
+    congr,
+    funext,
+    rw [neg_pow, mul_comm],
+  },
+  norm_num [mul_div, mul_comm],
+end
+
+-- Approach 2, using `conv` but smarter
+example {n : ℕ} : ∫ x : ℝ in 0..1, (-x) ^ n = (-1) ^ n * 1 / (n + 1) :=
+begin
+  conv in (_ ^ _) { rw neg_pow, },
+  norm_num [mul_div],
+end
+
+-- Approach 3, using `simp only` with `ctx`
+example {n : ℕ} : ∫ x : ℝ in 0..1, (-x) ^ n = (-1) ^ n * 1 / (n + 1) :=
+begin
+  simp only [neg_pow] { single_pass := tt },
+  norm_num [mul_div],
+end
+
+example {n : ℕ} : ∑ x in range (n + 1), (↑(n - x) : ℝ) = ∑ x in range (n + 1), (↑n - ↑x) :=
+begin
+  -- I want to cast ↑(n - x) into ↑n - ↑x, using the assumption that x ∈ range (n + 1)
+  -- But this isn't really possible, so I have to use sum_congr
+  apply sum_congr rfl,
+  intros x hx,
+  -- And then extract the condition here
+  rw mem_range_succ_iff at hx,
+  rw nat.cast_sub hx,
+end
+
+example {n : ℕ} : ∃ (N : ℕ), (N : ℝ) = (Icc 1 (n * 2 + 1)).lcm coe * ∑ (x : ℕ) in range (n + 1), (n.choose x) * (-1) ^ (n - x) / (↑(n - x) + ↑n + 1) :=
+begin
+  -- Key: use `apply_congr` instead of plain `congr` to include "local information"
+  conv in (finset.sum _ _) {
+    apply_congr,
+    skip,
+    rw [nat.cast_sub (mem_range_succ_iff.1 H), ← add_sub_right_comm],
+  },
+  sorry,
+end
+
+#eval ((nat.prime 3) : bool)
+#eval ((nat.prime (2^32 + 15)) : bool)
+
+example {n : ℕ} : ∃ N : ℕ, ↑N = (n : ℝ) :=
+begin
+  squeeze_simp,
+end
+
+example {n : ℕ} : even n ∨ odd n :=
+begin
+  -- strong induction on n
+  induction n using nat.strong_induction_on with k hk,
+  -- handle n = 0
+  by_cases h₀ : k = 0,
+  { left, use 0, rwa add_zero, },
+  -- handle n = 1
+  by_cases h₁ : k = 1,
+  { right, use 0, rwa [mul_zero, zero_add], },
+  { -- first use induction hypothesis on (n - 2)
+    -- by proving 2 ≤ n
+    have h : 2 ≤ k,
+    { omega, },
+    -- and prove n - 2 < n, i.e. we can use strong induction
+    have h' : k - 2 < k,
+    { omega, },
+    -- that way we can subtract
+    specialize hk (k - 2) h',
+    -- now depending on whether (k - 2) is even or odd
+    -- we split into cases
+    cases hk,
+    -- even case, meaning k - 2 = 2k'
+    { cases hk with k' hk', left, use k' + 1, linarith, },
+    -- odd case, meaning k - 2 = 2k' + 1
+    { cases hk with k' hk', right, use k' + 1, linarith, },
+  }
+end
+
+example {k : ℕ} (h : k ≠ 0) (h' : k ≠ 1) : 2 ≤ k :=
+begin
+  rcases k with _|_|_;
+  simpa <|> simp [nat.succ_le_succ_iff],
+end
+
+example {k : ℕ} : volume {x : ℝ | 0 ≤ x ∧ x ≤ 1} = 1 :=
+begin
+  rwa [← set.Icc, volume_Icc, tsub_zero, ennreal.of_real_one],
+end
+
+-- lim (x → ∞) (1 / x) = 0
+example {f : ℝ → ℝ} (h : f = λ x, 1 / x) : filter.tendsto f filter.at_top (nhds 0) :=
+begin
+  rw [h, filter.tendsto_at_top'],
+  intros s hs,
+  -- Rephrase nhds as open ball
+  rw _root_.mem_nhds_iff at hs,
+  -- Get an instance of open ball
+  rcases hs with ⟨t, ⟨H, ⟨ht, ht'⟩⟩⟩,
+  -- t ∈ nhds 0
+  replace ht := is_open_iff_mem_nhds.1 ht 0 ht',
+  -- find (-ε, ε) within t
+  rcases mem_nhds_iff_exists_Ioo_subset.1 ht with ⟨l, ⟨r, ⟨h₁, h₂⟩⟩⟩,
+  -- prove that 0 < r
+  rw [set.Ioo, set.mem_set_of_eq] at h₁,
+  -- finish proof that ∀ b ≥ 2 / r, 1 / b < r
+  use 2 / r,
+  intros b hb,
+  rw ge_iff_le at hb,
+  have b_pos : 0 < b,
+  { exact lt_of_lt_of_le (div_pos zero_lt_two h₁.2) hb, },
+  rw [div_le_iff h₁.2, mul_comm, ← div_le_iff b_pos] at hb,
+  have h' : 1 / b < r,
+  { have : 1 / b ≤ r / 2, by { simpa [le_div_iff (zero_lt_two' ℝ), mul_comm, ← mul_div_assoc], },
+    linarith, },
+  calc 1 / b ∈ set.Ioo 0 r : by { rw [set.Ioo, set.mem_set_of_eq], split,
+                                  exact div_pos zero_lt_one b_pos, linarith, }
+         ... ⊆ set.Ioo l r : by { apply set.Ioo_subset_Ioo_left, linarith [h₁.1], }
+         ... ⊆ t           : h₂
+         ... ⊆ s           : H,
+end
+
+-- Proof by Kevin Buzzard
+example {f : ℝ → ℝ} (h : f = λ x, 1 / x) : filter.tendsto f filter.at_top (nhds 0) :=
+begin
+  rw [h, filter.tendsto_at_top'],
+  intros s hs,
+  -- Rephrase nhds as open ball
+  rw _root_.mem_nhds_iff at hs,
+  -- Get an instance of open ball
+  rcases hs with ⟨t, ⟨H, ⟨ht, ht'⟩⟩⟩,
+  -- Then there is an open interval inside
+  rcases is_open.exists_Ioo_subset ht (by {use 0, exact ht'}) with ⟨l, ⟨h, ⟨hlh, hlh'⟩⟩⟩,
+  -- ???
+  rw is_open_iff_mem_nhds at ht,
+  specialize ht _ ht',
+  rw metric.mem_nhds_iff at ht,
+  rcases ht with ⟨ε, hεpos, hε⟩,
+  use 1 / ε + 37,
+  intros b hb,
+  replace hb := lt_of_lt_of_le (lt_add_of_pos_right _ (by norm_num)) hb,
+  have hbpos : 0 < b := lt_trans (one_div_pos.2 hεpos) hb,
+  rw one_div_lt hεpos at hb,
+  apply H,
+  apply hε,
+  rw [mem_ball_zero_iff, real.norm_eq_abs],
+  rwa abs_eq_self.2,
+  all_goals {positivity},
 end
