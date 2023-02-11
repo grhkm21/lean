@@ -1,5 +1,6 @@
 import geometry.euclidean.angle.sphere
 import linear_algebra.affine_space.finite_dimensional
+import tactic
 
 open affine affine_map affine_subspace euclidean_geometry finite_dimensional set
 open_locale affine big_operators classical euclidean_geometry real
@@ -48,7 +49,7 @@ end generic_space
 
 namespace real_space
 
-open metric emetric ennreal nnreal
+open metric emetric ennreal nnreal generic_space
 
 -- Specify on the real plane
 noncomputable theory
@@ -62,30 +63,87 @@ variables [normed_add_torsor V Pt] [finite_dimensional ℝ V] [hd2 : fact (finra
 include hd2
 
 -- Perpendicular distance from p3 to p1 p2, which doesn't seem to be defined in mathlib
-def perp_dist (p1 p2 p3 : Pt) : ℝ := metric.inf_dist p3 line[ℝ, p1, p2]
+def pdist (p1 p2 p3 : Pt) : ℝ := metric.inf_dist p3 line[ℝ, p1, p2]
 
 -- (Practice lemmas)
 -- The perpendicular distance from p1 to p1 p2 is 0
-lemma lemma1 {p1 p2 : Pt} : perp_dist V p1 p2 p1 = 0 :=
+lemma lemma1 {p1 p2 : Pt} : pdist V p1 p2 p1 = 0 :=
 begin
-  simp only [perp_dist, coe_affine_span, inf_dist,
-             inf_edist_zero_of_mem (mem_span_points ℝ p1 _ (mem_insert p1 _)), zero_to_real],
+  simp only [pdist, coe_affine_span, inf_dist, inf_edist_zero_of_mem (mem_span_points ℝ p1 _ (mem_insert p1 _)), zero_to_real],
 end
 
 -- The shortest distance from p3 to any point on p1 p2 is perpendicular distance
 lemma lemma2 {p1 p2 p3 : Pt} :
-(⨅ x ∈ line[ℝ, p1, p2], edist x p3).to_real = perp_dist V p1 p2 p3 :=
+(⨅ x ∈ line[ℝ, p1, p2], edist x p3).to_real = pdist V p1 p2 p3 :=
 begin
-  rw perp_dist,
-  rw coe_affine_span,
-  rw [inf_dist, inf_edist],
+  rw [pdist, coe_affine_span, inf_dist, inf_edist],
   simp_rw [edist_dist, dist_comm],
   exact rfl,
 end
 
+lemma infi_set {ι α : Type*} [nonempty ι] {f : ι → ennreal} (h : ∀ x, f x ≠ ⊤) :
+(⨅ x, f x).to_real = ⨅ x, (f x).to_real :=
+begin
+  lift f to ι → nnreal, by exact h,
+  simp,
+  rw ← coe_infi,
+end
+
+lemma infi_set' {ι : Type*} [nonempty ι] {f : ι → ennreal} (h : ∀ x, f x ≠ ⊤) :
+(⨅ x, f x).to_real = ⨅ x, (f x).to_real :=
+begin
+  lift f to ι → nnreal, by exact h, simp only [coe_to_real],
+  -- (∀ (i : ι), b ≤ f i) → (∀ (w : α), b < w → (∃ (i : ι), f i < w)) → (⨅ (i : ι), f i) = b
+  -- b = (⨅ (x : ι), ↑(f x)).to_nnreal
+  -- Goal: ⨅ (i : ι), f i = (⨅ (x : ι), ↑(f x)).to_nnreal
+  rw [← nnreal.coe_infi, ennreal.to_real],
+  congr,
+
+  have l1 : (⨅ (x : ι), ↑(f x)) ≠ ⊤,
+  { by_contradiction h',
+    rw infi_eq_top at h',
+    cases (exists_true_iff_nonempty.2 _inst_5) with y hy,
+    exact (h y) (h' y), },
+  
+  
+end
+
+-- Casting issues
+lemma lemma2' {p1 p2 p3 : Pt} :
+(⨅ x ∈ line[ℝ, p1, p2], dist x p3) = (⨅ x ∈ line[ℝ, p1, p2], edist x p3).to_real :=
+begin
+
+end
+
+-- Perpendicular distance from p3 to p1 p2 equals the distance from p3 to its orthogonal prrojection
+lemma lemma3 {p1 p2 p3 : Pt} :
+pdist V p1 p2 p3 = dist p3 (orthogonal_projection line[ℝ, p1, p2] p3) :=
+begin
+  rw [pdist, coe_affine_span],
+end
+
+-- Given a right angle triangle ABC with right angle at B, fix a point D on BC.
+-- Then, distance from D to AC < distance from A to BC
+/-
+A
+|\
+| \
+|  \
+|   X
+|  / \
+B-D---C
+-/
+-- Not done at all
+lemma lemma4 {p1 p2 p3 : Pt} (h : inner (p1 -ᵥ p2) (p3 -ᵥ p2) = (0 : ℝ)) :
+∀ p4 ∈ affine_segment ℝ p2 p3, pdist V p1 p3 p4 < pdist V p2 p3 p1 :=
+begin
+  intros P hP,
+end
+
+
 -- The Sylvester-Gallai Theorem, this formulation doesn't work
 theorem sylvester_gallai {s : finset Pt} (h : ¬(collinear ℝ (s : set Pt))):
-∃ p1 (hp1 : p1 ∈ s) p2 (hp2 : p2 ∈ s), generic_space.ordinary_line ℝ s p1 p2 hp1 hp2 :=
+∃ p1 (hp1 : p1 ∈ s) p2 (hp2 : p2 ∈ s), ordinary_line ℝ s p1 p2 hp1 hp2 :=
 begin
 
 end
