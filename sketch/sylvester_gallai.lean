@@ -50,6 +50,7 @@ end generic_space
 namespace real_space
 
 open metric emetric ennreal nnreal generic_space
+open_locale ennreal nnreal
 
 -- Specify on the real plane
 noncomputable theory
@@ -63,30 +64,39 @@ variables [normed_add_torsor V Pt] [finite_dimensional ℝ V] [hd2 : fact (finra
 include hd2
 
 -- Perpendicular distance from p3 to p1 p2, which doesn't seem to be defined in mathlib
-def pdist (p1 p2 p3 : Pt) : ℝ := metric.inf_dist p3 line[ℝ, p1, p2]
+def pdist (p1 p2 p3 : Pt) : ℝ≥0 := metric.inf_nndist p3 line[ℝ, p1, p2]
 
 -- (Practice lemmas)
 -- The perpendicular distance from p1 to p1 p2 is 0
 lemma lemma1 {p1 p2 : Pt} : pdist V p1 p2 p1 = 0 :=
 begin
-  simp only [pdist, coe_affine_span, inf_dist, inf_edist_zero_of_mem (mem_span_points ℝ p1 _ (mem_insert p1 _)), zero_to_real],
+  rw [pdist, inf_nndist, to_nnreal_eq_zero_iff],
+  left,
+  apply inf_edist_zero_of_mem,
+  apply mem_span_points,
+  rw [mem_insert_iff],
+  left,
+  refl,
 end
 
 -- The shortest distance from p3 to any point on p1 p2 is perpendicular distance
 lemma lemma2 {p1 p2 p3 : Pt} :
-(⨅ x ∈ line[ℝ, p1, p2], edist x p3).to_real = pdist V p1 p2 p3 :=
+⨅ x ∈ (line[ℝ, p1, p2] : set Pt), nndist x p3 = pdist V p1 p2 p3 :=
 begin
-  rw [pdist, coe_affine_span, inf_dist, inf_edist],
-  simp_rw [edist_dist, dist_comm],
-  exact rfl,
+  rw [pdist, inf_nndist, inf_edist, coe_affine_span],
+  simp_rw [nndist_edist],
 end
 
-lemma infi_set {ι α : Type*} [nonempty ι] {f : ι → ennreal} (h : ∀ x, f x ≠ ⊤) :
-(⨅ x, f x).to_real = ⨅ x, (f x).to_real :=
+lemma infi_set {ι α : Type*} [nonempty ι] {f : ι → ennreal} (h : ∀ x : ι, f x ≠ ⊤):
+(⨅ x, f x).to_nnreal = (⨅ x, (f x).to_nnreal) :=
 begin
   lift f to ι → nnreal, by exact h,
   simp,
-  rw ← coe_infi,
+end
+
+example {A B C : Prop} (h : A → B) (h' : B → C) : A → C :=
+begin
+  library_search
 end
 
 lemma infi_set' {ι : Type*} [nonempty ι] {f : ι → ennreal} (h : ∀ x, f x ≠ ⊤) :
@@ -105,7 +115,7 @@ begin
     cases (exists_true_iff_nonempty.2 _inst_5) with y hy,
     exact (h y) (h' y), },
   
-  
+
 end
 
 -- Casting issues
