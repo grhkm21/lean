@@ -11,42 +11,66 @@ open filter set
 ## Definition of filters
 -/
 
+-- a principal filter of s is all sets containing s
 def principal {α : Type*} (s : set α) : filter α :=
 { sets := {t | s ⊆ t},
+  -- univ is in the principal filter i.e. univ contains s
   univ_sets := begin
-    sorry
+    exact subset_univ s,
   end,
+  -- if x is in the filter and y contains x, then y is in the filter
+  -- proof: s ∈ x ⊆ y
   sets_of_superset := begin
-    sorry
+    intros x y hx h,
+    exact subset_trans hx h,
   end,
+  -- filter is closed under intersection
+  -- proof: s ∈ x ∧ s ∈ y → s ∈ x ∩ y
   inter_sets := begin
-    sorry
+    intros x y hx hy,
+    exact subset_inter hx hy,
   end}
 
+-- this filter contains all unbounded interval [a, ∞)
 def at_top : filter ℕ :=
 { sets := {s | ∃ a, ∀ b, a ≤ b → b ∈ s},
   univ_sets := begin
-    sorry
+    simp_rw [mem_set_of_eq, mem_univ, implies_true_iff, exists_const],
   end,
   sets_of_superset := begin
-    sorry
+    rintros x y ⟨a, ha⟩ hy,
+    use a,
+    intros b hb,
+    exact hy (ha b hb),
   end,
   inter_sets := begin
-    sorry
+    rintros x y ⟨a, ha⟩ ⟨a', ha'⟩,
+    use max a a',
+    intros b hb,
+    simp [ha b (max_le_iff.1 hb).1, ha' b (max_le_iff.1 hb).2],
   end}
 
--- The next exercise is slightly more tricky, you should probably keep it for later
-
+-- neighborhood of x forms a filter
 def nhds (x : ℝ) : filter ℝ :=
 { sets := {s | ∃ ε > 0, Ioo (x - ε) (x + ε) ⊆ s},
   univ_sets := begin
-    sorry
+    use 1,
+    norm_num,
   end,
   sets_of_superset := begin
-    sorry
+    rintros X Y ⟨ε, hε, hX⟩ h,
+    exact ⟨ε, hε, subset_trans hX h⟩,
   end,
+  -- if X and Y are neighborhoods of x, then so is X ∩ Y
   inter_sets := begin
-    sorry
+    rintros X Y ⟨ε₁, hε₁, hX⟩ ⟨ε₂, hε₂, hY⟩,
+    use [min ε₁ ε₂, lt_min hε₁ hε₂],
+    -- consider each element
+    intros b hb,
+    rw mem_Ioo at hb,
+    split,
+    { apply hX, split ; linarith [min_le_left ε₁ ε₂] },
+    { apply hY, split ; linarith [min_le_right ε₁ ε₂] },
   end}
 
 /-
@@ -72,7 +96,11 @@ Compare
 example {α β γ : Type*} {A : filter α} {B : filter β} {C : filter γ} {f : α → β} {g : β → γ}
   (hf : tendsto f A B) (hg : tendsto g B C) : tendsto (g ∘ f) A C :=
 begin
-  sorry
+  rw tendsto_def,
+  intros s hs,
+  replace hg := tendsto_def.1 hg s hs,
+  replace hf := tendsto_def.1 hf _ hg,
+  rwa preimage_comp,
 end
 
 -- Now let's get functorial (same statement as above, different proof packaging).
@@ -80,9 +108,9 @@ example {α β γ : Type*} {A : filter α} {B : filter β} {C : filter γ} {f : 
   (hf : tendsto f A B) (hg : tendsto g B C) : tendsto (g ∘ f) A C :=
 begin
   calc
-  map (g ∘ f) A = map g (map f A) : sorry
-            ... ≤ map g B         : sorry
-            ... ≤ C               : sorry,
+  map (g ∘ f) A = map g (map f A) : map_map
+            ... ≤ map g B         : map_mono hf
+            ... ≤ C               : hg,
 end
 
 /-
