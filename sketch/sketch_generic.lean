@@ -428,3 +428,10 @@ begin
   rwa abs_eq_self.2,
   all_goals {positivity},
 end
+
+example : ∃ (n : ℕ), 10 < n ∧ n < 20 :=
+begin
+  -- rw and_comm,
+  -- simp_rw [and_comm],
+  simp only [and_comm _] { single_pass := tt },
+end
