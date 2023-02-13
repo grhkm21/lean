@@ -26,6 +26,7 @@ lemma s2 : s 2 = 2 := by rw s
 @[simp]
 lemma s3 : s 3 = 3 := by rw s
 
+-- Proof by ericr
 lemma s_four : s 4 = 4 :=
 begin
   rw s,
