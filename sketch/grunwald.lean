@@ -1,114 +1,104 @@
+import algebra.order.group.with_top
 import analysis.special_functions.pow
 import data.finset.basic
 import data.nat.modeq
+import data.nat.prime
 import data.nat.prime_norm_num
 import data.rat.basic
 import number_theory.padics.padic_integers
 import tactic
 
-open finset nat int padic padic_int
+open finset nat int
 open_locale nat classical
 
-/-
-Lemmas for numeric evaluations
--/
+variables {p : ℕ} [hp : fact (nat.prime p)]
+include hp
 
-lemma Zp_norm_remainder_nat {n p r : ℕ} [hp : fact (nat.prime p)] (h : r % p ≠ 0) :
-‖(↑(n * p + r) : ℤ_[p])‖ = 1 :=
+namespace padic
+
+@[simp] lemma valuation_neg_one : (-1 : ℚ_[p]).valuation = 0 :=
 begin
-  rw [padic_int.norm_def, coe_nat_cast,
-      show (↑(n * p + r) : ℚ_[p]) = (↑(↑(n * p + r) : ℚ) : ℚ_[p]), by trivial,
-      padic_norm_e.eq_padic_norm, show (1 : ℝ) = ↑(1 : ℚ), by rw algebra_map.coe_one],
-  congr,
-  rw padic_norm.nat_eq_one_iff,
-  by_contradiction h',
-  exact h (nat.dvd_iff_mod_eq_zero.1 $ (nat.dvd_add_right $ dvd_mul_left _ _).1 h'),
+  -- We transfer to `padic.add_valuation`, which is an actual valuation and use their results
+  have h : padic.add_valuation (-1 : ℚ_[p]) = padic.add_valuation (1 : ℚ_[p]),
+  { exact add_valuation.map_neg padic.add_valuation (1 : ℚ_[p]), },
+  rw [padic.add_valuation.apply, padic.add_valuation.apply] at h,
+  simp only [with_top.coe_eq_coe.1 h, padic.valuation_one],
+  simp only [ne.def, one_ne_zero, not_false_iff],
+  simp only [ne.def, neg_eq_zero, one_ne_zero, not_false_iff],
 end
 
-lemma Zp_norm_remainder_int {n r : ℤ} {p : ℕ} [hp : fact (nat.prime p)] (h : r % p ≠ 0) :
-‖(↑(n * p + r) : ℤ_[p])‖ = 1 :=
+@[simp] lemma valuation_neg {n : ℚ_[p]} : (-n).valuation = n.valuation :=
 begin
-  rw [padic_int.norm_def, coe_int_cast,
-      show (↑(n * p + r) : ℚ_[p]) = (↑(↑(n * p + r) : ℚ) : ℚ_[p]), by trivial,
-      padic_norm_e.eq_padic_norm, show (1 : ℝ) = ↑(1 : ℚ), by rw algebra_map.coe_one],
-  congr,
-  rw padic_norm.int_eq_one_iff,
-  by_contradiction h',
-  exact h ((int.dvd_iff_mod_eq_zero _ _).1 $ (dvd_add_right $ dvd_mul_left ↑p n).1 h'),
+  by_cases h : n = 0,
+  { rw [h, neg_zero], },
+  { rw [← mul_neg_one, padic.valuation_map_mul h (neg_ne_zero.2 one_ne_zero), valuation_neg_one, 
+        add_zero], },
 end
 
-example {q : ℚ} {k : ℕ} : (↑q ^ (-↑k : ℤ) : ℝ) = ↑(q ^ (-↑k : ℤ) : ℚ) :=
-begin
-  norm_num,
+end padic
+
+namespace padic_int
+
+theorem coe_inj {n : ℤ_[p]} (h : n ≠ 0) : (n : ℚ_[p]) ≠ 0 := begin
+  cases n,
+  simp only [subtype.coe_mk, ne.def],
+  intro h',
+  simp_rw [h', padic_int.mk_zero] at h,
+  exact h (eq.refl 0),
 end
 
-example {a b : ℚ} (h : a < b) : (a : ℝ) < (b : ℝ) :=
+theorem image {n : ℤ_[p]} : n ≠ 0 → (∃ k : ℕ, ‖n‖ = (↑p ^ -(k : ℤ))) :=
 begin
-  show_term { simp [h], },
+  intro hn,
+  cases @padic_norm_e.image' p _ ↑n (coe_inj hn) with k hk,
+  have k_nonneg : 0 ≤ k,
+  { sorry, },
+  use k.to_nat,
+  rw [to_nat_of_nonneg k_nonneg, norm_def, ← rat.cast_coe_nat, ← rat.cast_zpow, ← hk,
+      padic_norm_e.is_norm],
 end
 
-lemma Zp_norm_remainder_Zp {p k : ℕ} [hp : fact (nat.prime p)] {n r : ℤ_[p]}
-(h : ↑p ^ (-k : ℤ) < ‖r‖) : ‖n * p ^ k + r‖ = ‖r‖ :=
+@[simp] theorem valuation_neg {n : ℤ_[p]} : (-n).valuation = n.valuation := padic.valuation_neg
+
+theorem valuation_map_add {m n : ℤ_[p]} (hmn : m + n ≠ 0) :
+min m.valuation n.valuation ≤ (m + n).valuation :=
 begin
-  rw [padic_int.norm_def, algebra_map.coe_add, algebra_map.coe_mul, algebra_map.coe_pow,
-      coe_nat_cast],
-  have h' : @padic_norm_e p _ (↑n * ↑p ^ k : ℚ_[p]) ≠ @padic_norm_e p _ ↑r,
-  by { sorry, },
-  have h'' : @padic_norm_e p _ (↑n * ↑p ^ k : ℚ_[p]) ≤ p ^ (-k : ℤ),
-  by { sorry, },
-  simp_rw [norm] at *,
-  rw [show (↑p ^ (-k : ℤ) : ℝ) = ↑(p ^ (-k : ℤ) : ℚ), by { push_cast, }] at *,
-  rw padic_norm_e.add_eq_max_of_ne' h',
-  congr,
-  rw max_eq_right_iff,
-  exact le_of_lt (lt_of_le_of_lt h'' $ rat.cast_lt.1 h),
+  apply padic.valuation_map_add,
+  rwa [← coe_add, ne.def, coe_eq_zero],
 end
 
-@[simp] lemma Z2_norm_zero : ‖(↑0 : ℤ_[2])‖ = 0 := by rw [algebra_map.coe_zero, norm_zero]
-
-@[simp] lemma Z2_norm_one : ‖(↑1 : ℤ_[2])‖ = 1 := by rw [algebra_map.coe_one, norm_one]
-
--- @[norm_num] lemma {p : ℕ} [hp : nat.prime p] 
-@[simp] lemma Z2_norm_bit0_nat {n : ℕ} (h : 0 < n) : ‖(↑(bit0 n) : ℤ_[2])‖ = ‖(↑n : ℤ_[2])‖ * 2⁻¹ :=
+theorem norm_add_eq_max_of_ne' {q r : ℤ_[p]} (h : ‖q‖ < ‖r‖) : ‖q + r‖ = ‖r‖ :=
 begin
-  conv_lhs { simp only [bit0, nat.cast_add], },
-  rw [← mul_two, padic_int.norm_mul, show (2 : ℤ_[2]) = ↑(2 : ℕ), by norm_cast, norm_p],
-  norm_cast,
+rw [norm_add_eq_max_of_ne (ne_of_lt h), max_eq_right_iff.2 (le_of_lt h)],
 end
 
-@[simp] lemma Z2_norm_bit1_nat {n : ℕ} (h : 0 < n) : ‖(↑(bit1 n) : ℤ_[2])‖ = 1 :=
+theorem valuation_p_pow_mul_add (n : ℕ) (c r : ℤ_[p]) (hn : 0 < n) (hc : c ≠ 0) (hr : r ≠ 0)
+(h : r.valuation < n) : (↑p ^ n * c + r).valuation = r.valuation :=
 begin
-  conv_lhs { rw bit1, simp only [bit0], rw ← mul_two, },
-  apply Zp_norm_remainder_nat,
-  omega,
+  let hp : nat.prime p := fact_iff.1 hp,
+  suffices : ‖↑p ^ n * c + r‖ = ‖r‖,
+  { rwa [norm_eq_pow_val, norm_eq_pow_val hr, zpow_inj, neg_inj] at this;
+    simp only [nat.cast_pos, ne.def, zpow_neg, inv_inj] at *,
+    -- Just fixing all the ... ≠ 0 requirements
+    { exact prime.pos hp, },
+    { by_contradiction hp',
+      rw [← nat.cast_one, nat.cast_inj] at hp',
+      exact nat.prime.ne_one hp hp', },
+    { by_contradiction,
+      rw add_eq_zero_iff_eq_neg at h,
+      have h' : ↑n + c.valuation = r.valuation,
+      { rwa [← valuation_p_pow_mul, ← @valuation_neg p _ r, h], },
+      have : ↑n ≤ r.valuation,
+      { rw [← h'], exact int.le_add_of_nonneg_right (valuation_nonneg _), },
+      linarith, }, },
+  apply norm_add_eq_max_of_ne',
+  cases @image p _ c hc with k hk,
+  rw [norm_mul, norm_p_pow, norm_eq_pow_val hr, hk, ← zpow_add'],
+  { sorry, },
+  { left, rw [ne.def, nat.cast_eq_zero], exact nat.prime.ne_zero hp, },
 end
 
-@[simp] lemma Z2_norm_bit0_int {n : ℤ} (h : 0 ≠ n) : ‖(↑(bit0 n) : ℤ_[2])‖ = ‖(↑n : ℤ_[2])‖ * 2⁻¹ :=
-begin
-  conv_lhs { simp only [bit0, int.cast_add], },
-  rw [← mul_two, padic_int.norm_mul, show (2 : ℤ_[2]) = ↑(2 : ℕ), by norm_cast, norm_p],
-  norm_cast,
-end
-
-@[simp] lemma Z2_norm_bit1_int {n : ℤ} (h : 0 ≠ n) : ‖(↑(bit1 n) : ℤ_[2])‖ = 1 :=
-begin
-  conv_lhs { rw bit1, simp only [bit0], rw ← mul_two, },
-  apply Zp_norm_remainder_int,
-  omega,
-end
-
-@[simp] lemma Z2_norm_bit0_Z2 {n : ℤ_[2]} (h : 0 ≠ n) : ‖bit0 n‖ = ‖(↑n : ℤ_[2])‖ * 2⁻¹ :=
-begin
-  conv_lhs { simp only [bit0, nat.cast_add], },
-  rw [← mul_two, padic_int.norm_mul, show (2 : ℤ_[2]) = ↑(2 : ℕ), by norm_cast, norm_p],
-  norm_cast,
-end
-
-@[simp] lemma Z2_norm_bit1_Z2 {n : ℤ_[2]} (h : 0 ≠ n) : ‖bit1 n‖ = 1 :=
-begin
-  conv_lhs { rw bit1, simp only [bit0], rw ← mul_two, },
-  
-end
+end padic_int
 
 -- Just proving Wang's counterexamples to Grunwald's wrong result
 -- Main tool is to use p-adic valuations to disprove results
@@ -116,25 +106,24 @@ end
 -- 16 is not an 8th power over the integers
 lemma part1 : ¬∃ n : ℤ, n ^ 8 = 16 :=
 begin
-  -- suffices : ¬∃ n : ℕ, n ^ 8 = 16,
-  -- { contrapose! this,
-  --   cases this with n h,
-  --   exact ⟨n.nat_abs, by { zify, simpa only [pow_abs, h] }⟩, },
-  -- by_contradiction,
-  -- cases h with n hn,
-  -- by_cases hn' : n = 0,
-  -- { rw hn' at hn, linarith, },
-  -- have h : padic_val_nat 2 (n ^ 8) = padic_val_nat 2 16,
-  -- { rw hn, },
-  -- rw [show 16 = 2 ^ 4, by norm_num,
-  --     @padic_val_nat.pow _ _ nat.fact_prime_two 4 _, padic_val_nat.self] at h;
-  --   try { simp, },
-  -- { rw padic_val_nat.pow at h,
-  --   have h' : 8 ∣ 8 * padic_val_nat 2 n,
-  --   { exact dvd_mul_right _ _, },
-  --   norm_num [h] at h',
-  --   exact hn', },
-  sorry,
+  suffices : ¬∃ n : ℕ, n ^ 8 = 16,
+  { contrapose! this,
+    cases this with n h,
+    exact ⟨n.nat_abs, by { zify, simpa only [pow_abs, h] }⟩, },
+  by_contradiction,
+  cases h with n hn,
+  by_cases hn' : n = 0,
+  { rw hn' at hn, linarith, },
+  have h : padic_val_nat 2 (n ^ 8) = padic_val_nat 2 16,
+  { rw hn, },
+  rw [show 16 = 2 ^ 4, by norm_num,
+      @padic_val_nat.pow _ _ nat.fact_prime_two 4 _, padic_val_nat.self] at h;
+    try { simp, },
+  { rw padic_val_nat.pow at h,
+    have h' : 8 ∣ 8 * padic_val_nat 2 n,
+    { exact dvd_mul_right _ _, },
+    norm_num [h] at h',
+    exact hn', },
 end
 
 -- 16 is not an 8th power over Z₂
@@ -143,7 +132,7 @@ begin
   push_neg,
   intro n,
   by_contradiction,
-  have : ‖n ^ 8‖ = ‖(16 : ℤ_[2])‖,
-  { rw h, },
-  rw [Z2_norm_bit0 _] at this,
+  have : (n ^ 8).valuation = (2 ^ 4 : ℤ_[2]).valuation,
+  { norm_num, rw h, },
+  
 end
