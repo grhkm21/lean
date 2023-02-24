@@ -235,4 +235,9 @@ begin
   -- get N
 end
 
+theorem a : 0 = 0 :=
+begin
+  simp,
+end
+
 end polynomial

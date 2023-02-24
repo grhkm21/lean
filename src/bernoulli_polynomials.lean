@@ -6,7 +6,7 @@ import number_theory.bernoulli_polynomials
 open_locale big_operators
 open_locale nat polynomial
 
-open nat finset
+open nat finset power_series
 
 namespace polynomial
 
@@ -26,6 +26,35 @@ begin
     rw [this, eval_C] at hr,
     rwa hr at this,
   }
+end
+
+/-
+theorem bernoulli_generating_function (t : A) :
+  mk (λ n, aeval t ((1 / n! : ℚ) • bernoulli n)) * (exp A - 1) =
+    power_series.X * rescale t (exp A) :=
+-/
+
+theorem bernoulli_eval_one_div_two {n : ℕ} :
+(bernoulli n).eval (1 / 2) = (2 ^ (1 - n : ℤ) - 1) * _root_.bernoulli n :=
+begin
+  suffices : mk (λ n, (1 / n! : ℚ) * (bernoulli n).eval (1 / 2))
+    = mk (λ n, (1 / n! : ℚ) * (2 ^ (1 - n : ℤ) - 1) * _root_.bernoulli n),
+  { let h := (power_series.ext_iff.1 this) n,
+    rwa [coeff_mk, coeff_mk] at h, },
+  -- line 1
+  simp_rw [sub_mul, one_mul],
+  simp_rw [show (mk (λ n : ℕ, 2 ^ (1 - n : ℤ) * _root_.bernoulli n - _root_.bernoulli n)
+    = mk (λ n, 2 ^ (1 - n : ℤ) * _root_.bernoulli n) - mk _root_.bernoulli), by exact rfl],
+  -- line 2
+  -- conv_rhs {
+    -- congr,congr,funext,rw zpow_sub₀,
+  -- },
+  simp_rw [@zpow_sub₀ ℚ _ 2 two_ne_zero 1 _, zpow_one],
+end
+
+example {f g : ℕ → ℚ} : mk (f - g) = mk f - mk g :=
+begin
+  exact rfl,
 end
 
 theorem bernoulli_eval_one_neg {n : ℕ} {x : ℚ} :
@@ -60,5 +89,7 @@ begin
       dsimp only [En] at hk,
       rw [hk, mul_zero] } }
 end
+
+
 
 end polynomial
